@@ -197,7 +197,7 @@ def main():
                         oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity) #Creates new aircraft
                         oAircraftTracker.add_aircraft(oAircraft)
                     else:
-                        oAircraftTracker.aircrafts[callsign].update_information(longitude, latitude, last_updated) #Adds new aircraft to tracker list
+                        oAircraftTracker.aircrafts[callsign].update_info(longitude, latitude, last_updated,  altitude, heading, velocity) #Adds new aircraft to tracker list
                     
                     print()
                 
@@ -206,7 +206,7 @@ def main():
 
             oAircraftTracker.display()
             print("Iteration Completed")
-            time.sleep(10)
+            time.sleep(5)
         else:
             print("Connection failed: Status code {}".format(status_code))
     
