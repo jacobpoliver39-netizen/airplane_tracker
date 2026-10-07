@@ -2,9 +2,10 @@ import time
 
 import requests
 import math
-import Calculator
-import Aircraft
-
+import calculator
+from aircraft import Aircraft
+from aircraft_tracker import AircraftTracker
+"""
 api = "https://opensky-network.org/api/states/all"
 params1 = {#Thess Park
         "lamin": 38.6,
@@ -150,9 +151,11 @@ while True:
         print("Connection failed: Status code {}".format(status_code))
 
         exit()
+"""
 
 
-class New_Main_Class:
+
+def main():
 
     api = "https://opensky-network.org/api/states/all"
     params1 = {#Thess Park
@@ -161,52 +164,58 @@ class New_Main_Class:
             "lomin": 20.9,
             "lomax": 24.9
         }
+    oAircraftTracker = AircraftTracker() #Class to handle all current aircrafts
 
     while True:
-        aircrafts = []
-        response = requests.get(api, params=params1)
-        status_code = response.status_code
 
+        response = requests.get(api, params=params1)
+        data = response.json()
+        status_code = response.status_code
 
         if status_code == 200:
             print("Connected to API!")
-            data = response.json()
-            
             print()
+
             if data["states"] != None:
-                for data in data["states"]:
-                    callsign = data[1]
-                    longitude = data[5]
-                    latitude = data[6]
-                    if data[7]:
-                        altitude = round(data[7]*3.28084,1) #convert to ft
+                for aircraft_data in data["states"]:
+                    callsign = aircraft_data[1]
+                    longitude = aircraft_data[5]
+                    latitude = aircraft_data[6]
+                    if aircraft_data[7]:
+                        altitude = round(aircraft_data[7]*3.28084,1) #convert to ft
                     else:
-                        altitude = 40000
-                    on_ground = data[8]
-                    velocity = data[9]
-                    heading = data[10]
-                    vertical_rate = data[11]
-                    country_of_origin = data[2]
-                    last_updated = data[3]
-                    velocity = round(velocity*1.943834,1) #convert to mph
-                    velocity = velocity/3600
+                        altitude = 1
+                    on_ground = aircraft_data[8]
+                    velocity = aircraft_data[9]
+                    heading = aircraft_data[10]
+                    vertical_rate = aircraft_data[11]
+                    country_of_origin = aircraft_data[2]
+                    last_updated = aircraft_data[3]
+                    velocity = round(velocity*1.943834,1) #convert to knots
 
-                    aircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity)
-
-
+                    if callsign not in oAircraftTracker.aircrafts: #Checks if aircraft already exists
+                        oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity) #Creates new aircraft
+                        oAircraftTracker.add_aircraft(oAircraft)
+                    else:
+                        oAircraftTracker.aircrafts[callsign].update_information(longitude, latitude, last_updated) #Adds new aircraft to tracker list
                     
-            
+                    print()
+                
+            else:
+                print("No Aircraft Found")
 
-                    if callsign in distance_history and distance_history[callsign][len(distance_history[callsign])-1][0] != last_updated:
-                        distance_history[callsign].append([last_updated,distance])
-                    elif callsign in distance_history:
-                        pass
-                    else:
-                        distance_history[callsign] = [[last_updated,distance]]
+            oAircraftTracker.display()
+            print("Iteration Completed")
+            time.sleep(10)
+        else:
+            print("Connection failed: Status code {}".format(status_code))
+    
+            exit()
 
-                    distance_history[callsign].sort(key=lambda x: x[0])
-                    history = distance_history[callsign]
+main()
 
+
+'''
                     if len(history) >= 2 and len(history)>1:
                         num_points = min(len(history), 5)
 
@@ -253,15 +262,5 @@ class New_Main_Class:
 
 
                 print(distance_history)
-
-                time.sleep(5)
-
-
-            else:
-                print("No Aircraft Found")
-
-        else:
-            print("Connection failed: Status code {}".format(status_code))
-
-            exit()
-
+'''
+                
