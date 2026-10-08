@@ -10,11 +10,13 @@ def main():
 
     api = "https://opensky-network.org/api/states/all"
     params1 = {#Thess Park
-            "lamin": 38.6,
-            "lamax": 42.6,
-            "lomin": 20.9,
-            "lomax": 24.9
+            "lamin": 39.6,
+            "lamax": 41.6,
+            "lomin": 21.9,
+            "lomax": 23.9
         }
+    my_longitude = 22.9
+    my_latitude = 40.6
     oAircraftTracker = AircraftTracker() #Class to handle all current aircrafts
 
     while True:
@@ -48,14 +50,16 @@ def main():
                         oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity) #Creates new aircraft
                         oAircraftTracker.add_aircraft(oAircraft)
                     else:
-                        oAircraftTracker.aircrafts[callsign].update_info(longitude, latitude, last_updated,  altitude, heading, velocity) #Adds new aircraft to tracker list
-                    
+                        oAircraft = oAircraftTracker.aircrafts[callsign]
+                        oAircraft.update_info(longitude, latitude, last_updated,  altitude, heading, velocity) #Adds new aircraft to tracker list
+                                            
+                    print("Distnace Away: ", oAircraft.get_distance_from_user(my_longitude, my_latitude), " miles")
                     print()
                 
             else:
                 print("No Aircraft Found")
 
-            oAircraftTracker.display() #shows all current callsigns
+            oAircraftTracker.display() #shows all callsigns
             print("Iteration Completed")
             time.sleep(5)
         else:

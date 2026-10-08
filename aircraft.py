@@ -1,5 +1,8 @@
 
 #Maybe add distance history? Heading History?
+
+from calculator import Calculator
+
 class Aircraft:
 
     def __init__(self, callsign, timestamp, longitude, latitude, altitude, heading, country_of_origin, velocity):
@@ -30,12 +33,30 @@ class Aircraft:
             self.location_history[timestamp] = Position(longitude, latitude)
             print("History Updated")
 
+    def get_distance_from_user(self, user_longitude, user_latitude):
+        distance_from_user =  Calculator.calculate_haversine_distance(user_longitude, user_latitude, self.longitude, self.latitude)
+        return distance_from_user
+
+    def get_approach_speed_towards_user(self):
+        pass
+
+    def get_nearest_distance_from_user(self):
+        pass
+
+    def get_nearest_distance_time(self):
+        pass
+
+    def get_bearing_from_user(self):
+        pass
+
 
 class Position:
 
     def __init__(self, longitude, latitude):
         self.longitude = longitude
         self.latitude = latitude
+
+
     
     
         

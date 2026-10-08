@@ -1,19 +1,23 @@
 import math
 class Calculator:
 
-    def hav(self, x):
+    
+    def haversine(x):
         return math.pow(math.sin(x / 2), 2)
 
-    def distance_between(self, lat1, lon1, lat2, lon2):
-        lat1 = math.radians(lat1)
+    
+    def calculate_haversine_distance(lon1, lat1, lon2, lat2):
         lon1 = math.radians(lon1)
-        lat2 = math.radians(lat2)
+        lat1 = math.radians(lat1)
         lon2 = math.radians(lon2)
-        hav_angle = self.hav(lat2 - lat1) + math.cos(lat1) * math.cos(lat2) * self.hav(lon2 - lon1)
+        lat2 = math.radians(lat2)
+        hav_angle = Calculator.haversine(lat2 - lat1) + math.cos(lat1) * math.cos(lat2) * Calculator.haversine(lon2 - lon1)
         angle = math.asin(math.sqrt(hav_angle)) * 2
-        return round(angle * 3959,2)
+        distance_between = round(angle * 3959,2)
+        return distance_between
 
-    def bearing_angle_from_me(self, lat1, lon1, lat2, lon2):
+    @staticmethod
+    def bearing_angle_from_me(lat1, lon1, lat2, lon2):
 
         lat1 = math.radians(lat1)
         lon1 = math.radians(lon1)
@@ -30,8 +34,9 @@ class Calculator:
         angle = math.degrees(math.atan2(y, x))
 
         return (angle + 360) % 360
-
-    def bearing_from_me(self, angle):
+    
+    @staticmethod
+    def bearing_from_me(angle):
 
         if 337.5 < angle or angle <= 22.5:
             return "North"
@@ -50,7 +55,8 @@ class Calculator:
         elif 292.5 < angle <= 337.5:
             return "Northwest"
 
-    def approaching(self, bearing_from_me, heading):
+    @staticmethod
+    def approaching(bearing_from_me, heading):
 
         bearing_to_me = (bearing_from_me + 180) % 360
 
@@ -64,7 +70,8 @@ class Calculator:
         else:
             return "Flying Perpendicular to You"
 
-    def nearest_approach(self, bearing_from_me, distance_from_me, heading, velocity):
+    @staticmethod
+    def nearest_approach(bearing_from_me, distance_from_me, heading, velocity):
 
         bearing_to_me = (bearing_from_me + 180) % 360
 

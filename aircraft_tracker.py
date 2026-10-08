@@ -14,17 +14,4 @@ class AircraftTracker:
         for callsign in self.aircrafts:
             print(callsign)
 
-    def calculate_distance_away(self):
-        pass
-
-    def calculate_approach_speed(self):
-        pass
-
-    def calculate_nearest_appoach_distance(self):
-        pass
-
-    def calculate_nearest_appoach_time(self):
-        pass
-
-    def calculate_bearing_from_position(self):
-        pass
+    
