@@ -1,7 +1,12 @@
 Start adding in classes that actually calculate wanted information
     Probably start with distance away, and then closing velocity
+add function to remove out of range planes
 
 Eventually:
     Implement ALL calculating classes and display the relevent info
     Create a website or app to display the information nicely
     A visualy map would be awesome, expecially if it showed the predicted trajectories
+
+Very first steps:
+    Calculate distance from position
+    Maybe add distance to the postition class?

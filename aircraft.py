@@ -1,5 +1,5 @@
 
-
+#Maybe add distance history? Heading History?
 class Aircraft:
 
     def __init__(self, callsign, timestamp, longitude, latitude, altitude, heading, country_of_origin, velocity):
