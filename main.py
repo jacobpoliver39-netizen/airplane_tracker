@@ -9,7 +9,7 @@ from aircraft_tracker import AircraftTracker
 def main():
 
     api = "https://opensky-network.org/api/states/all"
-    params1 = {#Thess Park
+    params1 = {#Botsari
             "lamin": 39.6,
             "lamax": 41.6,
             "lomin": 21.9,
@@ -47,13 +47,13 @@ def main():
                     velocity = round(velocity*1.943834,1) #convert to knots
 
                     if callsign not in oAircraftTracker.aircrafts: #Checks if aircraft already exists
-                        oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity) #Creates new aircraft
+                        oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity, my_longitude, my_latitude) #Creates new aircraft
                         oAircraftTracker.add_aircraft(oAircraft)
                     else:
                         oAircraft = oAircraftTracker.aircrafts[callsign]
                         oAircraft.update_info(longitude, latitude, last_updated,  altitude, heading, velocity) #Adds new aircraft to tracker list
                                             
-                    print("Distnace Away: ", oAircraft.get_distance_from_user(my_longitude, my_latitude), " miles")
+                    oAircraft.get_info()
                     print()
                 
             else:

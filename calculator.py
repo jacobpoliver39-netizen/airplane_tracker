@@ -1,11 +1,11 @@
 import math
 class Calculator:
 
-    
+    @staticmethod
     def haversine(x):
         return math.pow(math.sin(x / 2), 2)
 
-    
+    @staticmethod
     def calculate_haversine_distance(lon1, lat1, lon2, lat2):
         lon1 = math.radians(lon1)
         lat1 = math.radians(lat1)
