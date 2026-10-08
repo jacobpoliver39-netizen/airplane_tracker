@@ -59,7 +59,7 @@ def main():
             else:
                 print("No Aircraft Found")
 
-            oAircraftTracker.display() #shows all callsigns
+            #oAircraftTracker.display() #shows all callsigns
             print("Iteration Completed")
             time.sleep(5)
         else:
