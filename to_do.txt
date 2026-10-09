@@ -1,5 +1,6 @@
 Start adding in classes that actually calculate wanted information
-    Probably start with distance away, and then closing velocity
+    closing velocity
+
 add function to remove out of range planes
 
 Eventually:
@@ -8,5 +9,14 @@ Eventually:
     A visualy map would be awesome, expecially if it showed the predicted trajectories
 
 Very first steps:
-    Calculate distance from position
-    Maybe add distance to the postition class?
+
+
+Ideas:
+    Add variables for closest plane, plane with closest approach, etc
+
+
+Friday Thoughts:
+    I'm hungry
+    finish implementing methods in Airplane class
+    better approach velocity (only use last few datapoints)
+    maybe Eventually add a method to determine is a plane's path is curving?

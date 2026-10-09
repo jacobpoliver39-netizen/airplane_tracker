@@ -15,13 +15,24 @@ def main():
             "lomin": 21.9,
             "lomax": 23.9
         }
-    my_longitude = 22.9
-    my_latitude = 40.6
+
+    params2 = {#ACT
+                "lamin": 39.6,
+                "lamax": 41.6,
+                "lomin": 22.0,
+                "lomax": 24.0
+            }
+
+    my_longitude = 23.0 #ACT Campus
+    my_latitude = 40.6 #ACT Campus
+    
+    #my_longitude = 22.9 #Botsari
+    #my_latitude = 40.6 #Botsari
     oAircraftTracker = AircraftTracker() #Class to handle all current aircrafts
 
     while True:
 
-        response = requests.get(api, params=params1)
+        response = requests.get(api, params=params2)
         data = response.json()
         status_code = response.status_code
 
@@ -53,13 +64,15 @@ def main():
                         oAircraft = oAircraftTracker.aircrafts[callsign]
                         oAircraft.update_info(longitude, latitude, last_updated,  altitude, heading, velocity) #Adds new aircraft to tracker list
                                             
-                    oAircraft.get_info()
+                    #oAircraft.get_info()
+                    #print(oAircraftTracker.aircrafts.values())
                     print()
                 
             else:
                 print("No Aircraft Found")
 
-            #oAircraftTracker.display() #shows all callsigns
+            #oAircraftTracker.display_callsigns() #shows all callsigns
+            oAircraftTracker.display_aircraft_info_nearest_to_farthest()
             print("Iteration Completed")
             time.sleep(5)
         else:
