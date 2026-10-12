@@ -1,0 +1,621 @@
+
+#root {
+  min-height: 100vh;
+}
+
+.dashboard {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 28px 36px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #263248;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #172b45;
+  color: #60a5fa;
+  font-size: 1.5rem;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+}
+
+.overview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 30px 0;
+}
+
+.eyebrow,
+.metric-label {
+  margin: 0;
+  color: #60a5fa;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.overview h2 {
+  margin: 9px 0 7px;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.88rem;
+}
+
+.metric {
+  min-width: 170px;
+  padding: 17px 20px;
+  border: 1px solid #263248;
+  border-radius: 10px;
+  background: #111a2b;
+}
+
+.metric-label {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.65rem;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-section {
+  padding: 18px;
+  border: 1px solid #263248;
+  border-radius: 14px;
+  background: #0f1726;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-heading h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.section-heading span {
+  color: #64748b;
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+}
+
+.leaflet-container {
+  height: min(68vh, 760px);
+  min-height: 480px;
+  width: 100%;
+  border: 1px solid #263248;
+  border-radius: 9px;
+  background: #111827;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 0.65rem;
+  letter-spacing: 0.07em;
+}
+
+@media (max-width: 700px) {
+  .dashboard {
+    padding: 18px;
+  }
+
+  .overview {
+    align-items: flex-start;
+  }
+
+  .metric {
+    min-width: auto;
+    padding: 12px;
+  }
+
+  .metric-label {
+    max-width: 100px;
+    line-height: 1.5;
+  }
+
+  .section-heading span {
+    display: none;
+  }
+
+  .leaflet-container {
+    min-height: 420px;
+  }
+
+  .footer {
+    flex-direction: column;
+  }
+}
+
+.aircraft-marker {
+  background: transparent;
+  border: none;
+}
+
+.aircraft-marker__symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #60a5fa;
+  font-size: 25px;
+  line-height: 1;
+  filter: drop-shadow(0 0 5px rgb(96 165 250 / 55%));
+  transform-origin: center;
+}
+
+/* Aircraft list + map layout */
+.surveillance-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.aircraft-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #263248;
+  border-radius: 9px;
+  background: #0b1220;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  border-bottom: 1px solid #263248;
+}
+
+.panel-heading h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.panel-heading p {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.aircraft-count {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #60a5fa;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.aircraft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(68vh, 760px);
+  min-height: 480px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.aircraft-card {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #263248;
+  border-radius: 8px;
+  background: #111a2b;
+  color: #e2e8f0;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.aircraft-card:hover {
+  border-color: #4775a8;
+  background: #162338;
+}
+
+.aircraft-card.selected {
+  border-color: #60a5fa;
+  background: #172b45;
+  box-shadow: inset 3px 0 #60a5fa;
+}
+
+.aircraft-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.aircraft-callsign {
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.aircraft-heading {
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.aircraft-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px 8px;
+}
+
+.aircraft-card-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.aircraft-card-stats div span {
+  color: #64748b;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.aircraft-card-stats div strong {
+  font-size: 0.76rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.map-container {
+  min-width: 0;
+}
+
+.map-container .leaflet-container {
+  height: min(68vh, 760px);
+  min-height: 480px;
+}
+
+/* Responsive layout for smaller screens */
+@media (max-width: 850px) {
+  .surveillance-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .aircraft-list {
+    min-height: 0;
+    max-height: 340px;
+  }
+
+  .map-container .leaflet-container {
+    min-height: 420px;
+  }
+}
+
+.aircraft-marker__symbol {
+  transition: color 150ms ease, filter 150ms ease;
+}
+
+.aircraft-marker__symbol--selected {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 8px rgb(251 191 36 / 85%));
+  font-size: 30px;
+}
+
+/* Search and filter controls */
+.filter-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+  border: 1px solid #263248;
+  border-radius: 9px;
+  background: #0b1220;
+}
+
+.search-control,
+.filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.search-control {
+  flex: 1 1 200px;
+}
+
+.filter-control {
+  flex: 0 1 185px;
+}
+
+.search-control label,
+.filter-control label {
+  color: #94a3b8;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+}
+
+.search-control input,
+.filter-control select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  outline: none;
+  background: #111a2b;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+}
+
+.search-control input:focus,
+.filter-control select:focus {
+  border-color: #60a5fa;
+}
+
+.search-control input::placeholder {
+  color: #64748b;
+}
+
+.reset-filters {
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+}
+
+.reset-filters:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.results-summary {
+  margin: 12px 2px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 600px) {
+  .search-control,
+  .filter-control {
+    flex: 1 1 100%;
+  }
+
+  .reset-filters {
+    width: 100%;
+  }
+}
+
+/* Selected aircraft details */
+.details-panel {
+  margin-top: 16px;
+  padding: 22px;
+  border: 1px solid #263248;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #263248;
+}
+
+.details-header .eyebrow {
+  margin-bottom: 8px;
+}
+
+.details-header h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.details-status {
+  padding: 6px 9px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  color: #93c5fd;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.details-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #263248;
+}
+
+.details-section h4 {
+  margin: 0 0 16px;
+  color: #94a3b8;
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #263248;
+  border-radius: 7px;
+  background: #111a2b;
+}
+
+.detail-item span {
+  color: #64748b;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.detail-item strong {
+  font-size: clamp(0.85rem, 1.5vw, 1.15rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.coordinate-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  font-size: 0.8rem;
+}
+
+.coordinate-row span {
+  color: #94a3b8;
+}
+
+.coordinate-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.details-footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-top: 18px;
+  color: #64748b;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+.details-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 190px;
+  text-align: center;
+}
+
+.details-empty-icon {
+  margin-bottom: 12px;
+  color: #60a5fa;
+  font-size: 1.8rem;
+}
+
+.details-empty h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.details-empty p {
+  max-width: 360px;
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 850px) {
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 450px) {
+  .details-panel {
+    padding: 16px;
+  }
+
+  .detail-item {
+    padding: 11px;
+  }
+}

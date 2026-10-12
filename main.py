@@ -3,10 +3,9 @@ import time
 import requests
 import calculator
 from aircraft import Aircraft
-from aircraft_tracker import AircraftTracker
+from tracker_state import aircraft_tracker
 
-
-def main():
+def main(stop_event=None):
 
     api = "https://opensky-network.org/api/states/all"
     params1 = {#Botsari
@@ -28,9 +27,9 @@ def main():
     
     #my_longitude = 22.9 #Botsari
     #my_latitude = 40.6 #Botsari
-    oAircraftTracker = AircraftTracker() #Class to handle all current aircrafts
+    oAircraftTracker = aircraft_tracker #Class to handle all current aircrafts
 
-    while True:
+    while stop_event is None or not stop_event.is_set():
 
         response = requests.get(api, params=params2)
         data = response.json()
@@ -76,13 +75,17 @@ def main():
             #oAircraftTracker.display_all_callsigns() #shows all callsigns
             oAircraftTracker.display_aircraft_info_nearest_to_farthest()
             print("Iteration Completed")
-            time.sleep(5)
+            if stop_event is None:
+                time.sleep(5)
+            else:
+                stop_event.wait(5)
         else:
             print("Connection failed: Status code {}".format(status_code))
     
             exit()
 
-main()
+if __name__ == "__main__":
+    main()
 
 
 '''
