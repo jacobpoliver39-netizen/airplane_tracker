@@ -1,22 +1,23 @@
-Start adding in classes that actually calculate wanted information
-    closing velocity
+
 
 add function to remove out of range planes
 
 Eventually:
-    Implement ALL calculating classes and display the relevent info
     Create a website or app to display the information nicely
     A visualy map would be awesome, expecially if it showed the predicted trajectories
-
-Very first steps:
-
 
 Ideas:
     Add variables for closest plane, plane with closest approach, etc
 
-
 Friday Thoughts:
     I'm hungry
     finish implementing methods in Airplane class
-    better approach velocity (only use last few datapoints)
     maybe Eventually add a method to determine is a plane's path is curving?
+    Add is_approaching value to Airplane and method to find it
+    time of nearest approach is the next most important method
+
+Monday Thoughts:
+    I'm hungry again, and accidentally made the food at home too salty
+    ***Nearest approach time seems very buggy
+    Next: Focus more on the tracker and sorting based on relevent information
+    *add function to remove out of range planes

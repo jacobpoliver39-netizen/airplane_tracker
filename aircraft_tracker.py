@@ -10,11 +10,11 @@ class AircraftTracker:
         self.aircrafts[callsign] = aircraft
         print("Aircraft Added to List")
 
-    def display_callsigns(self): #displays all current callsigns
+    def display_all_callsigns(self): #displays all current callsigns
         for callsign in self.aircrafts:
             print(callsign)
 
-    def display_aircraft_info_nearest_to_farthest(self): #displays all current callsigns
+    def display_aircraft_info_nearest_to_farthest(self):
         sorted_dict = self.sort_aircrafts_by_distance()
         for aircraft in sorted_dict.values():
             print(aircraft.get_info()) #FINISH THIS NEXT

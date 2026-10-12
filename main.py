@@ -55,7 +55,9 @@ def main():
                     vertical_rate = aircraft_data[11]
                     country_of_origin = aircraft_data[2]
                     last_updated = aircraft_data[3]
-                    velocity = round(velocity*1.943834,1) #convert to knots
+                    velocity = round(velocity*2.236936, 2) #convert m/s to mph
+                    if velocity == 0:
+                        velocity = 1
 
                     if callsign not in oAircraftTracker.aircrafts: #Checks if aircraft already exists
                         oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity, my_longitude, my_latitude) #Creates new aircraft
@@ -71,7 +73,7 @@ def main():
             else:
                 print("No Aircraft Found")
 
-            #oAircraftTracker.display_callsigns() #shows all callsigns
+            #oAircraftTracker.display_all_callsigns() #shows all callsigns
             oAircraftTracker.display_aircraft_info_nearest_to_farthest()
             print("Iteration Completed")
             time.sleep(5)

@@ -17,12 +17,12 @@ class Calculator:
         return distance_between
 
     @staticmethod
-    def bearing_angle_from_me(lat1, lon1, lat2, lon2):
+    def bearing_angle_from_user_to_plane(plane_lon, plane_lat, user_lon, user_lat):
 
-        lat1 = math.radians(lat1)
-        lon1 = math.radians(lon1)
-        lat2 = math.radians(lat2)
-        lon2 = math.radians(lon2)
+        lon1 = math.radians(user_lon)
+        lat1 = math.radians(user_lat)
+        lon2 = math.radians(plane_lon)
+        lat2 = math.radians(plane_lat)
 
         y = math.sin(lon2 - lon1) * math.cos(lat2)
 
@@ -36,7 +36,7 @@ class Calculator:
         return (angle + 360) % 360
     
     @staticmethod
-    def bearing_from_me(angle):
+    def direction_of_plane_from_user(angle):
 
         if 337.5 < angle or angle <= 22.5:
             return "North"
@@ -71,7 +71,7 @@ class Calculator:
             return "Flying Perpendicular to You"
 
     @staticmethod
-    def nearest_approach(bearing_from_me, distance_from_me, heading, velocity):
+    def nearest_approach(bearing_from_me, distance_from_me, heading):
 
         bearing_to_me = (bearing_from_me + 180) % 360
 
@@ -82,9 +82,21 @@ class Calculator:
 
         nearest_approach = distance_from_me * math.sin(theta)
 
-        distance_to_nearest = distance_from_me * math.cos(theta)
+        return round(nearest_approach, 2)
 
-        na_time = distance_to_nearest / velocity
+    @staticmethod
+    def nearest_approach_time(bearing_from_me, distance_from_me, heading, velocity):
+    
+            bearing_to_me = (bearing_from_me + 180) % 360
+    
+            theta = abs(bearing_to_me - heading)
+            theta = min(theta, 360 - theta)
+    
+            theta = math.radians(theta)
 
-        return nearest_approach, na_time
+            distance_to_nearest = distance_from_me * math.cos(theta)
+    
+            return round((distance_to_nearest/velocity)*3600, 2)
+
+    
 
