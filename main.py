@@ -76,9 +76,9 @@ def main(stop_event=None):
             oAircraftTracker.display_aircraft_info_nearest_to_farthest()
             print("Iteration Completed")
             if stop_event is None:
-                time.sleep(5)
+                time.sleep(15)
             else:
-                stop_event.wait(5)
+                stop_event.wait(15)
         else:
             print("Connection failed: Status code {}".format(status_code))
     
@@ -89,24 +89,7 @@ if __name__ == "__main__":
 
 
 '''
-                    if len(history) >= 2 and len(history)>1:
-                        num_points = min(len(history), 5)
-
-                        old_time = history[-num_points][0]
-                        old_distance = history[-num_points][1]
-
-                        new_time = history[-1][0]
-                        new_distance = history[-1][1]
-
-                        time_difference = new_time - old_time
-                        distance_difference = old_distance - new_distance
-
-                        closing_speed = round(
-                            3600 * distance_difference / time_difference
-                        )
-                    nearest_approach, na_time = calc.nearest_approach(bearing_angle_from_me,distance,heading,velocity)
-                    aircraft_info = [callsign, distance, bearing_from_me, approaching, closing_speed, altitude, last_updated, nearest_approach, na_time]
-                    aircrafts.append(aircraft_info)
+                    
 
                 for callsign in aircrafts[0]:
                     if callsign not in current_callsigns and (data["time"] - last_updated) > 40:

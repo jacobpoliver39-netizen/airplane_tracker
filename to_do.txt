@@ -21,3 +21,16 @@ Monday Thoughts:
     ***Nearest approach time seems very buggy
     Next: Focus more on the tracker and sorting based on relevent information
     *add function to remove out of range planes
+
+TESTS
+Document
+-no cmd queue(could make update cmd queue)
+-no state
+-yes registry(tracker)
+-no strategies(big opportunities)
+everything can be cmd
+
+First steps:
+-Document current state
+-
+

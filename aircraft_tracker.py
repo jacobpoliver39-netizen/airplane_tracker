@@ -17,7 +17,7 @@ class AircraftTracker:
     def display_aircraft_info_nearest_to_farthest(self):
         sorted_dict = self.sort_aircrafts_by_distance()
         for aircraft in sorted_dict.values():
-            print(aircraft.get_info()) #FINISH THIS NEXT
+            print(aircraft.get_info())
 
     def sort_aircrafts_by_distance(self):
         sorted_aircraft_dict = dict(sorted(self.aircrafts.items(), key=lambda item: item[1].get_distance_from_user()))

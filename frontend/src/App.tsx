@@ -78,14 +78,14 @@ function App() {
         <div className="brand">
           <div className="brand-icon">✈</div>
           <div>
-            <h1>FlightScope</h1>
+            <h1>JacobSky</h1>
             <p>Aircraft surveillance</p>
           </div>
         </div>
 
         <div className="system-status">
           <span className="status-dot" />
-          MOCK DATA
+          LIVE DATA
         </div>
       </header>
 
@@ -190,7 +190,7 @@ function App() {
       </section>
 
       <footer className="footer">
-        <span>FLIGHTSCOPE / PERSONAL AVIATION PROJECT</span>
+        <span> / PERSONAL AVIATION PROJECT</span>
         <span>DATA: SIMULATED</span>
       </footer>
     </main>

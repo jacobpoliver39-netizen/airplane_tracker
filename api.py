@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
         polling_thread.join(timeout=10)
 
 
-app = FastAPI(title="FlightScope API", lifespan=lifespan)
+app = FastAPI(title="JacobSky API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -40,7 +40,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "FlightScope API is running"}
+    return {"message": "JacobSky API is running"}
 
 
 @app.get("/aircraft")
