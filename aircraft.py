@@ -31,6 +31,7 @@ class Aircraft:
         self.heading = new_heading
         self.velocity = new_velocity
         self.distance_from_user = self.get_distance_from_user()
+        self.bearing_from_user = self.get_bearing_from_user_to_plane()
         self.update_location_history()
         print("Aircraft Info Updated")
 
@@ -43,39 +44,36 @@ class Aircraft:
         distance_from_user =  Calculator.calculate_haversine_distance(self.user_longitude, self.user_latitude, self.longitude, self.latitude)
         return distance_from_user
 
-    def get_approach_speed_towards_user(self): #NOTE: Dictionary entries not necessarily in chronological order. Shouldn't affect average approach speed, though
-        if (len(self.location_history.keys()) - 2) > 0:
-            sum_of_approach_speeds = 0
-            count = 0
-            for i in range(len(self.location_history.keys()) - 2):
-                newest_timestamp = list(self.location_history.keys())[-i]
-                newest_distance = self.location_history[newest_timestamp].get_distance_from_user()
-                second_newest_timestamp = list(self.location_history.keys())[-(i+1)]
-                second_newest_distance = self.location_history[second_newest_timestamp].get_distance_from_user()
-                difference_in_time = newest_timestamp - second_newest_timestamp
-                difference_in_distance = second_newest_distance - newest_distance
-                approach_speed = round(difference_in_distance/difference_in_time*3600,2)
-                sum_of_approach_speeds += approach_speed
-                count += count
-                if self.distance_from_user < 3 and count > 2: #FIX LATER; Very makeshift solution
-                    break
-            ave_approach_speed = round(sum_of_approach_speeds/(len(self.location_history.keys()) - 2), 2)   
-            return ave_approach_speed
-                    
-        elif len(self.location_history.keys()) > 1:
-            newest_timestamp = list(self.location_history.keys())[-1]
-            newest_distance = self.location_history[newest_timestamp].get_distance_from_user()
-            second_newest_timestamp = list(self.location_history.keys())[-2]
-            second_newest_distance = self.location_history[second_newest_timestamp].get_distance_from_user()
-            difference_in_time = newest_timestamp - second_newest_timestamp
-            difference_in_distance = second_newest_distance - newest_distance
-            ave_approach_speed = round(difference_in_distance/difference_in_time*3600,2)
-            return ave_approach_speed
-        
-        else:
+    def get_approach_speed_towards_user(self):
+        positions = sorted(self.location_history.items())
+
+        if len(positions) < 2:
             return "Not Enough Data"
-        
-    
+
+        approach_speeds = []
+
+        for (earlier_time, earlier_position), (later_time, later_position) in zip(
+            positions, positions[1:]
+        ):
+            difference_in_time = later_time - earlier_time
+
+            if difference_in_time <= 0:
+                continue
+
+            difference_in_distance = (
+                earlier_position.get_distance_from_user()
+                - later_position.get_distance_from_user()
+            )
+
+            approach_speed = difference_in_distance / difference_in_time * 3600
+            approach_speeds.append(approach_speed)
+
+        if not approach_speeds:
+            return "Not Enough Data"
+
+        return round(sum(approach_speeds) / len(approach_speeds), 2)
+
+
     def get_nearest_distance_from_user(self):
         return Calculator.nearest_approach(self.bearing_from_user, self.distance_from_user, self.heading)
 
@@ -127,6 +125,5 @@ class Position:
         return self.bearing_from_user
 
 
-    
-    
-        
+
+
