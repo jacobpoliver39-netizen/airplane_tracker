@@ -47,7 +47,7 @@ def root():
 def get_aircraft():
     aircraft_list = []
 
-    for plane in aircraft_tracker.aircrafts.values():
+    for plane in aircraft_tracker.get_sorted_aircrafts().values():
         aircraft_list.append({
             "id": plane.callsign,
             "callsign": plane.callsign,
