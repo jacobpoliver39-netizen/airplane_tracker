@@ -29,6 +29,7 @@ Document
 -yes registry(tracker)
 -no strategies(big opportunities)
 everything can be cmd
+-ADD TURNING vs STRAIGHT FOR STATE. CHANGE HOW IT CALCULATES PREDICTED PATHS AND APPROACHES
 
 First steps:
 -Document current state

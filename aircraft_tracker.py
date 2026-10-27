@@ -21,7 +21,11 @@ class AircraftTracker:
     def add_aircraft(self, aircraft):
         callsign = aircraft.callsign
         self.aircrafts[callsign] = aircraft
-        print("Aircraft Added to List")
+        print(callsign, " Added to List")
+
+    def remove_aircraft(self, callsign):
+        del self.aircrafts[callsign]
+        print(callsign, " Removed From List")
 
     def display_all_callsigns(self):
         for callsign in self.aircrafts:

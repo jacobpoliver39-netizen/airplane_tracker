@@ -4,6 +4,7 @@ import requests
 import calculator
 from aircraft import Aircraft
 from tracker_state import aircraft_tracker
+from commands import RemoveMissingAircraftCommand
 
 def main(stop_event=None):
 
@@ -31,58 +32,117 @@ def main(stop_event=None):
 
     while stop_event is None or not stop_event.is_set():
 
-        response = requests.get(api, params=params2)
-        data = response.json()
-        status_code = response.status_code
+        
+        try:
+            response = requests.get(api, params=params2, timeout=20)
+            response.raise_for_status()
+            data = response.json()
 
-        if status_code == 200:
-            print("Connected to API!")
-            print()
+            # Validate the response before changing the tracker.
+            if not isinstance(data, dict) or "states" not in data:
+                raise ValueError("Unexpected OpenSky response structure")
 
-            if data["states"] != None:
-                for aircraft_data in data["states"]:
-                    callsign = aircraft_data[1]
-                    longitude = aircraft_data[5]
-                    latitude = aircraft_data[6]
-                    if aircraft_data[7]:
-                        altitude = round(aircraft_data[7]*3.28084,1) #convert to ft
-                    else:
-                        altitude = 1
-                    on_ground = aircraft_data[8]
-                    velocity = aircraft_data[9]
-                    heading = aircraft_data[10]
-                    vertical_rate = aircraft_data[11]
-                    country_of_origin = aircraft_data[2]
-                    last_updated = aircraft_data[3]
-                    velocity = round(velocity*2.236936, 2) #convert m/s to mph
-                    if velocity == 0:
-                        velocity = 1
+            states = data["states"]
 
-                    if callsign not in oAircraftTracker.aircrafts: #Checks if aircraft already exists
-                        oAircraft = Aircraft(callsign, last_updated, longitude, latitude, altitude, heading, country_of_origin, velocity, my_longitude, my_latitude) #Creates new aircraft
-                        oAircraftTracker.add_aircraft(oAircraft)
-                    else:
-                        oAircraft = oAircraftTracker.aircrafts[callsign]
-                        oAircraft.update_info(longitude, latitude, last_updated,  altitude, heading, velocity) #Adds new aircraft to tracker list
-                                            
-                    #oAircraft.get_info()
-                    #print(oAircraftTracker.aircrafts.values())
-                    print()
-                
-            else:
-                print("No Aircraft Found")
+            if states is not None:
+                if not isinstance(states, list):
+                    raise ValueError("OpenSky states must be a list or null")
 
-            #oAircraftTracker.display_all_callsigns() #shows all callsigns
-            oAircraftTracker.display_aircraft_info_nearest_to_farthest()
-            print("Iteration Completed")
+                if any(
+                    not isinstance(aircraft_data, (list, tuple))
+                    or len(aircraft_data) < 12
+                    for aircraft_data in states
+                ):
+                    raise ValueError("Malformed aircraft state in response")
+
+        except (requests.RequestException, ValueError) as error:
+            print(f"OpenSky request failed or returned invalid data: {error}")
+
             if stop_event is None:
                 time.sleep(15)
             else:
                 stop_event.wait(15)
+
+            continue
+
+
+        if states is not None:
+            observed_callsigns = set()
+
+            for aircraft_data in states:
+                callsign = aircraft_data[1]
+
+                # Ignore empty callsigns for tracking purposes.
+                if not callsign or not callsign.strip():
+                    continue
+
+                callsign = callsign.strip()
+                observed_callsigns.add(callsign)
+
+                longitude = aircraft_data[5]
+                latitude = aircraft_data[6]
+
+                if aircraft_data[7]:
+                    altitude = round(aircraft_data[7] * 3.28084, 1)
+                else:
+                    altitude = 1
+
+                on_ground = aircraft_data[8]
+                velocity = aircraft_data[9]
+                heading = aircraft_data[10]
+                vertical_rate = aircraft_data[11]
+                country_of_origin = aircraft_data[2]
+                last_updated = aircraft_data[3]
+
+                velocity = round(velocity * 2.236936, 2)
+                if velocity == 0:
+                    velocity = 1
+
+                if callsign not in oAircraftTracker.aircrafts:
+                    oAircraft = Aircraft(
+                        callsign,
+                        last_updated,
+                        longitude,
+                        latitude,
+                        altitude,
+                        heading,
+                        country_of_origin,
+                        velocity,
+                        my_longitude,
+                        my_latitude,
+                    )
+                    oAircraftTracker.add_aircraft(oAircraft)
+                else:
+                    oAircraft = oAircraftTracker.aircrafts[callsign]
+                    oAircraft.update_info(
+                        longitude,
+                        latitude,
+                        last_updated,
+                        altitude,
+                        heading,
+                        velocity,
+                    )
+
+            command = RemoveMissingAircraftCommand(
+                oAircraftTracker, observed_callsigns
+            )
+            command.execute()
+
         else:
-            print("Connection failed: Status code {}".format(status_code))
-    
-            exit()
+            print("No Aircraft Found")
+            command = RemoveMissingAircraftCommand(
+                oAircraftTracker, set()
+            )
+            command.execute()
+
+
+        #oAircraftTracker.display_all_callsigns() #shows all callsigns
+        oAircraftTracker.display_aircraft_info_nearest_to_farthest()
+        print("Iteration Completed")
+        if stop_event is None:
+            time.sleep(15)
+        else:
+            stop_event.wait(15)
 
 if __name__ == "__main__":
     main()
