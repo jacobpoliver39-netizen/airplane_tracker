@@ -7,6 +7,22 @@ interface AircraftListProps {
   onSelectAircraft: (id: string) => void;
 }
 
+function formatApproachTime(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
+    return "No future approach";
+  }
+
+  const totalSeconds = Math.round(seconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds}s`;
+  }
+
+  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
+}
+
 export default function AircraftList({
   aircraft,
   selectedAircraftId,
@@ -53,6 +69,24 @@ export default function AircraftList({
               <div>
                 <span>DISTANCE</span>
                 <strong>{plane.distance.toFixed(1)} mi</strong>
+              </div>
+            </div>
+
+            <div className="aircraft-approach">
+              <span className="approach-label">PREDICTED CLOSEST APPROACH</span>
+
+              <div className="approach-stats">
+                <div>
+                  <span>Closest distance</span>
+                  <strong>{plane.nearest_distance.toFixed(1)} mi</strong>
+                </div>
+
+                <div>
+                  <span>Time to closest point</span>
+                  <strong>
+                    {formatApproachTime(plane.nearest_distance_time)}
+                  </strong>
+                </div>
               </div>
             </div>
           </button>

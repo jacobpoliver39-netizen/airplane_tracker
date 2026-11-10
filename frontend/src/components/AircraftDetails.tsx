@@ -5,6 +5,22 @@ interface AircraftDetailsProps {
   aircraft: Aircraft | null;
 }
 
+function formatApproachTime(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
+    return "No future approach predicted";
+  }
+
+  const totalSeconds = Math.round(seconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds}s`;
+  }
+
+  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
+}
+
 export default function AircraftDetails({
   aircraft,
 }: AircraftDetailsProps) {
@@ -42,21 +58,41 @@ export default function AircraftDetails({
 
           <div className="detail-item">
             <span>GROUND SPEED</span>
-            <strong>{aircraft.speed} kt</strong>
+            <strong>{aircraft.speed} mph</strong>
           </div>
 
           <div className="detail-item">
             <span>HEADING</span>
-            <strong>
-              {aircraft.heading.toString().padStart(3, "0")}°
-            </strong>
+            <strong>{aircraft.heading.toString().padStart(3, "0")}°</strong>
           </div>
 
           <div className="detail-item">
-            <span>DISTANCE</span>
-            <strong>{aircraft.distance.toFixed(1)} nm</strong>
+            <span>CURRENT DISTANCE</span>
+            <strong>{aircraft.distance.toFixed(1)} mi</strong>
           </div>
         </div>
+      </div>
+
+      <div className="details-section approach-section">
+        <h4>PREDICTED CLOSEST APPROACH</h4>
+
+        <div className="detail-grid">
+          <div className="detail-item">
+            <span>CLOSEST DISTANCE</span>
+            <strong>{aircraft.nearest_distance.toFixed(1)} mi</strong>
+          </div>
+
+          <div className="detail-item">
+            <span>TIME TO CLOSEST POINT</span>
+            <strong>
+              {formatApproachTime(aircraft.nearest_distance_time)}
+            </strong>
+          </div>
+        </div>
+
+        <p className="approach-note">
+          Estimate assumes the aircraft maintains its current heading and speed.
+        </p>
       </div>
 
       <div className="details-section">
@@ -75,7 +111,7 @@ export default function AircraftDetails({
 
       <div className="details-footer">
         <span className="status-dot" />
-        <span>SIMULATED POSITION DATA</span>
+        <span>LIVE TRACKING DATA</span>
       </div>
     </aside>
   );

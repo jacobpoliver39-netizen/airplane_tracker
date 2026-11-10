@@ -292,3 +292,67 @@ def test_approach_speed_is_negative_when_aircraft_moves_away():
 
     assert aircraft.get_approach_speed_towards_user() == -240.0
 
+
+def test_approach_status_is_approaching_when_future_closest_point_exists():
+    aircraft = Aircraft(
+        callsign="TESTAPPROACH",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=1.0,
+        altitude=10000,
+        heading=180.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    assert aircraft.get_approach_status() == "approaching"
+
+
+def test_approach_status_is_passed_after_distance_starts_increasing():
+    from aircraft import Position
+
+    aircraft = Aircraft(
+        callsign="TESTPASSED",
+        timestamp=1030,
+        longitude=0.0,
+        latitude=1.0,
+        altitude=10000,
+        heading=0.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    aircraft.location_history[1000] = Position(
+        0.0, 0.0, 3.0, 180.0, 0.0
+    )
+    aircraft.location_history[1015] = Position(
+        0.0, 0.0, 1.0, 180.0, 0.0
+    )
+    aircraft.location_history[1030] = Position(
+        0.0, 0.0, 2.0, 0.0, 180.0
+    )
+    aircraft.distance_from_user = 2.0
+
+    assert aircraft.get_approach_status() == "passed"
+    assert aircraft.get_closest_distance_so_far() == 1.0
+
+
+def test_approach_status_is_moving_away_when_no_future_approach_exists():
+    aircraft = Aircraft(
+        callsign="TESTAWAY",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=1.0,
+        altitude=10000,
+        heading=0.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    assert aircraft.get_approach_status() == "moving_away"

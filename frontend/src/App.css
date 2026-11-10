@@ -619,3 +619,50 @@
     padding: 11px;
   }
 }
+
+
+.aircraft-approach {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.25));
+}
+
+.approach-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.approach-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.approach-stats div,
+.detail-item {
+  min-width: 0;
+}
+
+.approach-stats span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.approach-stats strong {
+  display: block;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.approach-note {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  opacity: 0.7;
+}

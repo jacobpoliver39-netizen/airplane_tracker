@@ -22,6 +22,12 @@ class FakeAircraft:
     def get_approach_speed_towards_user(self):
         return self.approach_speed
 
+    def get_nearest_distance_from_user(self):
+        return self.distance_from_user
+
+    def get_nearest_distance_time(self):
+        return 60.0
+
 
 def make_tracker():
     tracker = AircraftTracker()
@@ -77,4 +83,6 @@ def test_aircraft_endpoint_preserves_response_fields(monkeypatch):
         "speed",
         "heading",
         "distance",
+        "nearest_distance",
+        "nearest_distance_time",
     }

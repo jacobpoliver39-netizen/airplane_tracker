@@ -1,4 +1,6 @@
 import math
+
+
 class Calculator:
 
     @staticmethod
@@ -72,31 +74,37 @@ class Calculator:
 
     @staticmethod
     def nearest_approach(bearing_from_me, distance_from_me, heading):
+        bearing_to_me = (bearing_from_me + 180) % 360
+
+        theta = abs(bearing_to_me - heading)
+        theta = min(theta, 360 - theta)
+        theta = math.radians(theta)
+
+        # If the aircraft is moving away, its closest future
+        # point is its current position.
+        if theta >= math.pi / 2:
+            return round(distance_from_me, 2)
+
+        return round(distance_from_me * math.sin(theta), 2)
+
+    @staticmethod
+    def nearest_approach_time(
+        bearing_from_me, distance_from_me, heading, velocity
+    ):
+        if velocity is None or velocity <= 0:
+            return None
 
         bearing_to_me = (bearing_from_me + 180) % 360
 
         theta = abs(bearing_to_me - heading)
         theta = min(theta, 360 - theta)
-
         theta = math.radians(theta)
 
-        nearest_approach = distance_from_me * math.sin(theta)
+        # No future closest-approach event if the plane is
+        # moving away or perpendicular to us.
+        if theta >= math.pi / 2:
+            return None
 
-        return round(nearest_approach, 2)
+        distance_to_nearest = distance_from_me * math.cos(theta)
 
-    @staticmethod
-    def nearest_approach_time(bearing_from_me, distance_from_me, heading, velocity):
-    
-            bearing_to_me = (bearing_from_me + 180) % 360
-    
-            theta = abs(bearing_to_me - heading)
-            theta = min(theta, 360 - theta)
-    
-            theta = math.radians(theta)
-
-            distance_to_nearest = distance_from_me * math.cos(theta)
-    
-            return round((distance_to_nearest/velocity)*3600, 2)
-
-    
-
+        return round((distance_to_nearest / velocity) * 3600, 2)

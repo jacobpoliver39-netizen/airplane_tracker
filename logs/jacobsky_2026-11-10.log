@@ -1,0 +1,17 @@
+2026-11-10 10:52:54,705 | INFO | aircraft_tracker | Aircraft added to tracker: AEE7HT
+2026-11-10 10:52:54,705 | INFO | aircraft_tracker | Aircraft added to tracker: UAE751
+2026-11-10 10:52:54,706 | INFO | aircraft_tracker | Aircraft added to tracker: RMB2
+2026-11-10 10:52:54,707 | INFO | aircraft_tracker | Aircraft added to tracker: SEH2GK
+2026-11-10 10:52:54,707 | INFO | aircraft_tracker | Aircraft added to tracker: TVF32DN
+2026-11-10 10:52:54,708 | INFO | aircraft_tracker | Aircraft added to tracker: SVA215
+2026-11-10 10:52:54,709 | INFO | aircraft_tracker | Aircraft added to tracker: SEH6KU
+2026-11-10 10:52:54,709 | INFO | aircraft_tracker | Aircraft added to tracker: BCS9236
+2026-11-10 10:52:54,710 | INFO | aircraft_tracker | Aircraft removed from tracker: SEH2GK
+2026-11-10 10:52:54,710 | INFO | main | Polling cycle completed: 8 aircraft observed, 7 currently tracked
+2026-11-10 10:53:10,011 | INFO | aircraft_tracker | Aircraft added to tracker: SEH2GK
+2026-11-10 10:53:10,012 | INFO | aircraft_tracker | Aircraft removed from tracker: TVF32DN
+2026-11-10 10:53:10,013 | INFO | aircraft_tracker | Aircraft removed from tracker: SEH2GK
+2026-11-10 10:53:10,013 | INFO | main | Polling cycle completed: 7 aircraft observed, 6 currently tracked
+2026-11-10 10:53:25,349 | INFO | aircraft_tracker | Aircraft added to tracker: SEH2GK
+2026-11-10 10:53:25,350 | INFO | aircraft_tracker | Aircraft removed from tracker: SEH2GK
+2026-11-10 10:53:25,350 | INFO | main | Polling cycle completed: 7 aircraft observed, 6 currently tracked
