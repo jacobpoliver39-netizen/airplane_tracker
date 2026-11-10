@@ -93,6 +93,36 @@ export default function AircraftDetails({
         <p className="approach-note">
           Estimate assumes the aircraft maintains its current heading and speed.
         </p>
+
+                {aircraft.curved_nearest_distance !== null &&
+          aircraft.curved_nearest_distance_time !== null && (
+            <div className="curved-approach">
+              <h4>TURNING-FLIGHT ESTIMATE</h4>
+
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <span>CLOSEST DISTANCE</span>
+                  <strong>
+                    {aircraft.curved_nearest_distance.toFixed(1)} mi
+                  </strong>
+                </div>
+
+                <div className="detail-item">
+                  <span>TIME TO CLOSEST POINT</span>
+                  <strong>
+                    {formatApproachTime(
+                      aircraft.curved_nearest_distance_time
+                    )}
+                  </strong>
+                </div>
+              </div>
+
+              <p className="approach-note">
+                Estimate accounts for the aircraft's recent ground-track
+                direction and turn rate.
+              </p>
+            </div>
+          )}
       </div>
 
       <div className="details-section">

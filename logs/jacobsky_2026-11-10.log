@@ -15,3 +15,157 @@
 2026-11-10 10:53:25,349 | INFO | aircraft_tracker | Aircraft added to tracker: SEH2GK
 2026-11-10 10:53:25,350 | INFO | aircraft_tracker | Aircraft removed from tracker: SEH2GK
 2026-11-10 10:53:25,350 | INFO | main | Polling cycle completed: 7 aircraft observed, 6 currently tracked
+2026-11-10 11:23:33,461 | INFO | aircraft_tracker | Aircraft added to tracker: ELY315
+2026-11-10 11:23:33,462 | INFO | aircraft_tracker | Aircraft added to tracker: RMAF203
+2026-11-10 11:23:33,463 | INFO | aircraft_tracker | Aircraft added to tracker: TKJ1GA
+2026-11-10 11:23:33,463 | INFO | aircraft_tracker | Aircraft added to tracker: QTR15Y
+2026-11-10 11:23:33,464 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:23:33,465 | INFO | aircraft_tracker | Aircraft added to tracker: DLH1AJ
+2026-11-10 11:23:33,465 | INFO | aircraft_tracker | Aircraft added to tracker: CFG002
+2026-11-10 11:23:33,466 | INFO | aircraft_tracker | Aircraft added to tracker: TRA5225
+2026-11-10 11:23:33,466 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:23:33,466 | INFO | aircraft_tracker | Aircraft added to tracker: SXS3LD
+2026-11-10 11:23:33,467 | INFO | aircraft_tracker | Aircraft added to tracker: BCS7750
+2026-11-10 11:23:33,467 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:23:33,468 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:23:33,468 | INFO | main | Polling cycle completed: 11 aircraft observed, 9 currently tracked
+2026-11-10 11:23:48,991 | INFO | aircraft_tracker | Aircraft added to tracker: DAH3181
+2026-11-10 11:23:48,992 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:23:48,992 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:23:48,993 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:23:48,994 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:23:48,994 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 11:24:04,490 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:24:04,490 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:24:04,491 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:24:04,492 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:24:04,492 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 11:24:19,981 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:24:19,981 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:24:19,982 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:24:19,983 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:24:19,983 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 11:24:35,332 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:24:35,333 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:24:35,333 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:24:35,334 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:24:35,335 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 11:24:50,862 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:24:50,863 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:24:50,864 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:24:50,865 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:24:50,866 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 11:25:06,319 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:25:06,319 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:25:06,320 | INFO | aircraft_tracker | Aircraft removed from tracker: QTR15Y
+2026-11-10 11:25:06,321 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE111
+2026-11-10 11:25:06,321 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:25:06,321 | INFO | main | Polling cycle completed: 11 aircraft observed, 9 currently tracked
+2026-11-10 11:25:21,835 | INFO | aircraft_tracker | Aircraft added to tracker: AEE111
+2026-11-10 11:25:21,836 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:25:21,837 | INFO | aircraft_tracker | Aircraft removed from tracker: DLH1AJ
+2026-11-10 11:25:21,837 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:25:21,837 | INFO | main | Polling cycle completed: 10 aircraft observed, 9 currently tracked
+2026-11-10 11:25:37,307 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:25:37,308 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:25:37,308 | INFO | main | Polling cycle completed: 10 aircraft observed, 9 currently tracked
+2026-11-10 11:25:52,747 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:25:52,748 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:25:52,748 | INFO | main | Polling cycle completed: 10 aircraft observed, 9 currently tracked
+2026-11-10 11:26:08,185 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 5
+2026-11-10 11:26:08,185 | INFO | aircraft_tracker | Aircraft removed from tracker: TRA5225
+2026-11-10 11:26:08,186 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 5
+2026-11-10 11:26:08,186 | INFO | main | Polling cycle completed: 9 aircraft observed, 8 currently tracked
+2026-11-10 11:46:27,902 | INFO | aircraft_tracker | Aircraft added to tracker: PGT43RR
+2026-11-10 11:46:27,903 | INFO | aircraft_tracker | Aircraft added to tracker: ENT7598
+2026-11-10 11:46:27,903 | INFO | aircraft_tracker | Aircraft added to tracker: TVF78UM
+2026-11-10 11:46:27,904 | INFO | aircraft_tracker | Aircraft added to tracker: THY7AL
+2026-11-10 11:46:27,905 | INFO | aircraft_tracker | Aircraft added to tracker: THY16
+2026-11-10 11:46:27,905 | INFO | aircraft_tracker | Aircraft added to tracker: RMAF203
+2026-11-10 11:46:27,906 | INFO | aircraft_tracker | Aircraft added to tracker: QTR92J
+2026-11-10 11:46:27,906 | INFO | aircraft_tracker | Aircraft added to tracker: THY5RM
+2026-11-10 11:46:27,907 | INFO | aircraft_tracker | Aircraft added to tracker: AEE8YD
+2026-11-10 11:46:27,907 | INFO | aircraft_tracker | Aircraft added to tracker: ISR115
+2026-11-10 11:46:27,908 | INFO | aircraft_tracker | Aircraft added to tracker: SXS5KZ
+2026-11-10 11:46:27,909 | INFO | aircraft_tracker | Aircraft added to tracker: SXS8AJ
+2026-11-10 11:46:27,909 | INFO | aircraft_tracker | Aircraft added to tracker: SXS4MK
+2026-11-10 11:46:27,910 | INFO | aircraft_tracker | Aircraft added to tracker: MSC2928
+2026-11-10 11:46:27,910 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:31,455 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:34,944 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:38,448 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:41,873 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:45,328 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:48,837 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 11:46:52,428 | INFO | aircraft_tracker | Aircraft removed from tracker: RMAF203
+2026-11-10 11:46:52,429 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:46:55,939 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:46:59,219 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:02,518 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:05,964 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:09,312 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:12,645 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:16,020 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:19,389 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:22,881 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:26,169 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:30,447 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:33,862 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:37,179 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:40,658 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:44,132 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:48,949 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 11:47:52,478 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 13:58:54,426 | INFO | aircraft_tracker | Aircraft added to tracker: PGT46DU
+2026-11-10 13:58:54,427 | INFO | aircraft_tracker | Aircraft added to tracker: EWG29RB
+2026-11-10 13:58:54,429 | INFO | aircraft_tracker | Aircraft added to tracker: THY8YT
+2026-11-10 13:58:54,430 | INFO | aircraft_tracker | Aircraft added to tracker: BTI611
+2026-11-10 13:58:54,431 | INFO | aircraft_tracker | Aircraft added to tracker: QTR18F
+2026-11-10 13:58:54,432 | INFO | aircraft_tracker | Aircraft added to tracker: AEE584
+2026-11-10 13:58:54,433 | INFO | aircraft_tracker | Aircraft added to tracker: PPBFB
+2026-11-10 13:58:54,434 | INFO | aircraft_tracker | Aircraft added to tracker: AEE513
+2026-11-10 13:58:54,435 | INFO | aircraft_tracker | Aircraft added to tracker: AEE34
+2026-11-10 13:58:54,436 | INFO | aircraft_tracker | Aircraft added to tracker: DLH582
+2026-11-10 13:58:54,437 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 13:58:54,438 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 13:58:54,439 | INFO | aircraft_tracker | Aircraft added to tracker: MNSTR
+2026-11-10 13:58:54,440 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 13:58:54,441 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 13:58:54,442 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 13:59:09,907 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 13:59:09,908 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 13:59:09,909 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 13:59:09,910 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 13:59:09,911 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 13:59:25,596 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 13:59:25,597 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 13:59:25,598 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 13:59:25,599 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 13:59:25,600 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 13:59:41,013 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 13:59:41,015 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 13:59:41,016 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 13:59:41,017 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 13:59:41,018 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 13:59:56,599 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 13:59:56,600 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 13:59:56,601 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 13:59:56,602 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 13:59:56,603 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 14:00:12,038 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 14:00:12,039 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 14:00:12,041 | INFO | aircraft_tracker | Aircraft removed from tracker: PPBFB
+2026-11-10 14:00:12,042 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 14:00:12,043 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 14:00:12,044 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 14:00:27,446 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 14:00:27,448 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 14:00:27,449 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 14:00:27,449 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 14:00:27,451 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 14:00:42,846 | INFO | aircraft_tracker | Aircraft added to tracker: AEE6TY
+2026-11-10 14:00:42,847 | INFO | aircraft_tracker | Aircraft added to tracker: FLWME 6
+2026-11-10 14:00:42,848 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE513
+2026-11-10 14:00:42,850 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
+2026-11-10 14:00:42,851 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
+2026-11-10 14:00:42,853 | INFO | main | Polling cycle completed: 12 aircraft observed, 9 currently tracked

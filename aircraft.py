@@ -77,6 +77,67 @@ class Aircraft:
 
         return round(sum(approach_speeds) / len(approach_speeds), 2)
 
+    def get_estimated_turn_rate(self):
+        """Estimate recent ground-track turn rate in degrees per second."""
+        positions = sorted(self.location_history.items())[-6:]
+
+        observations = [
+            (
+                timestamp,
+                position.get_longitude(),
+                position.get_latitude(),
+            )
+            for timestamp, position in positions
+        ]
+
+        return Calculator.estimate_turn_rate(observations)
+
+    def get_estimated_ground_motion(self):
+        """Estimate current ground speed and track direction."""
+        positions = sorted(self.location_history.items())[-2:]
+
+        observations = [
+            (
+                timestamp,
+                position.get_longitude(),
+                position.get_latitude(),
+            )
+            for timestamp, position in positions
+        ]
+
+        return Calculator.estimate_ground_motion(observations)
+
+    def get_curved_nearest_approach(self):
+        """
+        Estimate closest future distance using recent curved ground motion.
+        Returns (distance_miles, time_seconds), or None if data is insufficient.
+        """
+        ground_motion = self.get_estimated_ground_motion()
+        turn_rate = self.get_estimated_turn_rate()
+
+        if ground_motion is None or turn_rate is None:
+            return None
+
+        ground_speed, ground_track = ground_motion
+
+        aircraft_east, aircraft_north = (
+            Calculator.gps_to_local_coordinates(
+                self.longitude,
+                self.latitude,
+                self.user_longitude,
+                self.user_latitude,
+            )
+        )
+
+        return Calculator.nearest_approach_ctrv(
+            aircraft_east=aircraft_east,
+            aircraft_north=aircraft_north,
+            speed_mph=ground_speed,
+            ground_track_degrees=ground_track,
+            turn_rate_degrees_per_second=turn_rate,
+            prediction_seconds=60,
+            sample_interval_seconds=2,
+        )
 
     def get_nearest_distance_from_user(self):
         return Calculator.nearest_approach(self.bearing_from_user, self.distance_from_user, self.heading)

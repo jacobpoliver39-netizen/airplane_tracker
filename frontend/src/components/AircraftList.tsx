@@ -88,6 +88,26 @@ export default function AircraftList({
                   </strong>
                 </div>
               </div>
+              {plane.curved_nearest_distance !== null &&
+                plane.curved_nearest_distance_time !== null && (
+                  <div className="approach-stats">
+                    <div>
+                      <span>Turning estimate</span>
+                      <strong>
+                        {plane.curved_nearest_distance.toFixed(1)} mi
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Turning time to closest point</span>
+                      <strong>
+                        {formatApproachTime(
+                          plane.curved_nearest_distance_time
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+                )}
             </div>
           </button>
         ))}

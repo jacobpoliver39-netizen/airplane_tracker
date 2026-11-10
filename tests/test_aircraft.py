@@ -1,4 +1,5 @@
 from aircraft import Aircraft
+import pytest
 
 
 def test_update_info_recalculates_bearing_after_aircraft_moves():
@@ -356,3 +357,155 @@ def test_approach_status_is_moving_away_when_no_future_approach_exists():
     )
 
     assert aircraft.get_approach_status() == "moving_away"
+
+def test_estimated_turn_rate_detects_clockwise_turn():
+    aircraft = Aircraft(
+        callsign="TESTTURN",
+        timestamp=0,
+        longitude=0.000,
+        latitude=0.000,
+        altitude=10000,
+        heading=0.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    for timestamp, longitude, latitude in [
+        (15, 0.000, 0.010),
+        (30, 0.003, 0.020),
+        (45, 0.010, 0.027),
+    ]:
+        aircraft.update_info(
+            new_longitude=longitude,
+            new_latitude=latitude,
+            new_timestamp=timestamp,
+            new_altitude=10000,
+            new_heading=0.0,
+            new_velocity=100.0,
+        )
+
+    turn_rate = aircraft.get_estimated_turn_rate()
+
+    assert turn_rate is not None
+    assert turn_rate > 0
+
+
+def test_estimated_turn_rate_returns_none_with_one_position():
+    aircraft = Aircraft(
+        callsign="TESTNOTURN",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=1.0,
+        altitude=10000,
+        heading=180.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    assert aircraft.get_estimated_turn_rate() is None
+
+def test_estimated_ground_motion_detects_eastbound_flight():
+    aircraft = Aircraft(
+        callsign="TESTGROUND",
+        timestamp=1000,
+        longitude=0.000,
+        latitude=0.000,
+        altitude=10000,
+        heading=0.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    aircraft.update_info(
+        new_longitude=0.010,
+        new_latitude=0.000,
+        new_timestamp=1015,
+        new_altitude=10000,
+        new_heading=0.0,
+        new_velocity=100.0,
+    )
+
+    result = aircraft.get_estimated_ground_motion()
+
+    assert result is not None
+
+    speed, direction = result
+
+    assert speed > 0
+    assert direction == pytest.approx(90.0)
+
+
+def test_estimated_ground_motion_returns_none_with_one_position():
+    aircraft = Aircraft(
+        callsign="TESTNODATA",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=1.0,
+        altitude=10000,
+        heading=180.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    assert aircraft.get_estimated_ground_motion() is None
+
+def test_curved_nearest_approach_returns_none_with_insufficient_history():
+    aircraft = Aircraft(
+        callsign="TEST123",
+        timestamp=1000,
+        longitude=1.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=270.0,
+        country_of_origin="Test",
+        velocity=120.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    assert aircraft.get_curved_nearest_approach() is None
+
+
+def test_curved_nearest_approach_uses_estimated_ground_motion(monkeypatch):
+    aircraft = Aircraft(
+        callsign="TEST456",
+        timestamp=1000,
+        longitude=1.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=270.0,
+        country_of_origin="Test",
+        velocity=120.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    monkeypatch.setattr(
+        aircraft,
+        "get_estimated_ground_motion",
+        lambda: (120.0, 270.0),
+    )
+    monkeypatch.setattr(
+        aircraft,
+        "get_estimated_turn_rate",
+        lambda: 0.5,
+    )
+
+    result = aircraft.get_curved_nearest_approach()
+
+    assert result is not None
+
+    distance, time = result
+
+    assert distance < aircraft.distance_from_user
+    assert 0 <= time <= 60
+
+

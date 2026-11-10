@@ -52,6 +52,7 @@ def get_aircraft():
     aircraft_list = []
 
     for plane in aircraft_tracker.get_sorted_aircrafts().values():
+        curved_approach = plane.get_curved_nearest_approach()
         aircraft_list.append({
             "id": plane.callsign,
             "callsign": plane.callsign,
@@ -63,6 +64,12 @@ def get_aircraft():
             "distance": plane.distance_from_user,
             "nearest_distance": plane.get_nearest_distance_from_user(),
             "nearest_distance_time": plane.get_nearest_distance_time(),
+             "curved_nearest_distance": (
+                curved_approach[0] if curved_approach is not None else None
+            ),
+            "curved_nearest_distance_time": (
+                curved_approach[1] if curved_approach is not None else None
+            ),
         })
 
     return aircraft_list
