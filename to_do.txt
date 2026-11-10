@@ -35,3 +35,16 @@ First steps:
 -Document current state
 -
 
+
+Tuesday 27/10
+-aircraft icons are wrong by +90 degrees
+
+
+
+Tuesday, NOV 10
+-add curved trajectories ON MAP
+-compare predicted vs actual
+-PLANES ARE PROXIES
+-Latency Hidding: Animate the planes 
+moving from last known position to 
+predicted position between API calls!

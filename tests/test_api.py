@@ -31,6 +31,9 @@ class FakeAircraft:
     def get_curved_nearest_approach(self):
         return None
 
+    def get_curved_trajectory(self):
+        return None
+
 
 def make_tracker():
     tracker = AircraftTracker()
@@ -90,6 +93,8 @@ def test_aircraft_endpoint_preserves_response_fields(monkeypatch):
         "nearest_distance_time",
         "curved_nearest_distance",
         "curved_nearest_distance_time",
+        "curved_trajectory",
     }
     assert plane["curved_nearest_distance"] is None
     assert plane["curved_nearest_distance_time"] is None
+    assert plane["curved_trajectory"] is None

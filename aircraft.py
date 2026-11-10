@@ -26,8 +26,23 @@ class Aircraft:
         self.bearing_from_user = self.get_bearing_from_user_to_plane()
         logger.debug("Aircraft created: %s", self.callsign)
         self.update_location_history()
+        self.prediction_errors = []
 
     def update_info(self, new_longitude, new_latitude, new_timestamp, new_altitude, new_heading, new_velocity):
+        if new_timestamp > self.timestamp:
+            snapshot = self.create_prediction_snapshot()
+
+            result = self.evaluate_prediction_snapshot(
+                snapshot,
+                actual_timestamp=new_timestamp,
+                actual_longitude=new_longitude,
+                actual_latitude=new_latitude,
+            )
+
+            if result is not None:
+                self.prediction_errors.append(result)
+                self.prediction_errors = self.prediction_errors[-500:]
+
         self.longitude = new_longitude
         self.latitude = new_latitude
         self.timestamp = new_timestamp
@@ -107,6 +122,102 @@ class Aircraft:
 
         return Calculator.estimate_ground_motion(observations)
 
+    def create_prediction_snapshot(self):
+        """
+        Capture straight-line and curved predictions from the
+        aircraft's current state.
+        """
+        ground_motion = self.get_estimated_ground_motion()
+        turn_rate = self.get_estimated_turn_rate()
+
+        return {
+            "timestamp": self.timestamp,
+            "longitude": self.longitude,
+            "latitude": self.latitude,
+            "straight_speed": self.velocity,
+            "straight_heading": self.heading,
+            "ground_motion": ground_motion,
+            "turn_rate": turn_rate,
+        }
+
+    def evaluate_prediction_snapshot(
+        self,
+        snapshot,
+        actual_timestamp,
+        actual_longitude,
+        actual_latitude,
+    ):
+        """Compare saved predictions with a later observed position."""
+        elapsed_seconds = actual_timestamp - snapshot["timestamp"]
+
+        if elapsed_seconds <= 0:
+            return None
+
+        # Straight-line prediction using reported speed and heading.
+        straight_displacement = Calculator.predict_ctrv_position(
+            snapshot["straight_speed"],
+            snapshot["straight_heading"],
+            0,
+            elapsed_seconds,
+        )
+
+        straight_longitude, straight_latitude = (
+            Calculator.local_coordinates_to_gps(
+                straight_displacement[0],
+                straight_displacement[1],
+                snapshot["longitude"],
+                snapshot["latitude"],
+            )
+        )
+
+        straight_error = Calculator.calculate_haversine_distance(
+            straight_longitude,
+            straight_latitude,
+            actual_longitude,
+            actual_latitude,
+        )
+
+        result = {
+            "timestamp": snapshot["timestamp"],
+            "elapsed_seconds": elapsed_seconds,
+            "straight_error_miles": straight_error,
+            "curved_error_miles": None,
+        }
+
+        # Curved prediction, only when the snapshot had enough history.
+        ground_motion = snapshot["ground_motion"]
+        turn_rate = snapshot["turn_rate"]
+
+        if ground_motion is not None and turn_rate is not None:
+            ground_speed, ground_track = ground_motion
+
+            curved_displacement = Calculator.predict_ctrv_position(
+                ground_speed,
+                ground_track,
+                turn_rate,
+                elapsed_seconds,
+            )
+
+            curved_longitude, curved_latitude = (
+                Calculator.local_coordinates_to_gps(
+                    curved_displacement[0],
+                    curved_displacement[1],
+                    snapshot["longitude"],
+                    snapshot["latitude"],
+                )
+            )
+
+            result["curved_error_miles"] = (
+                Calculator.calculate_haversine_distance(
+                    curved_longitude,
+                    curved_latitude,
+                    actual_longitude,
+                    actual_latitude,
+                )
+            )
+
+        return result
+
     def get_curved_nearest_approach(self):
         """
         Estimate closest future distance using recent curved ground motion.
@@ -138,6 +249,63 @@ class Aircraft:
             prediction_seconds=60,
             sample_interval_seconds=2,
         )
+
+    
+    def get_curved_trajectory(
+        self,
+        prediction_seconds=60,
+        sample_interval_seconds=5,
+    ):
+        """
+        Generate future GPS coordinates using the CTRV model.
+        Returns a list of [latitude, longitude] pairs, or None
+        if there is insufficient movement history.
+        """
+        ground_motion = self.get_estimated_ground_motion()
+        turn_rate = self.get_estimated_turn_rate()
+
+        if ground_motion is None or turn_rate is None:
+            return None
+
+        if (
+            prediction_seconds < 0
+            or sample_interval_seconds <= 0
+        ):
+            return None
+
+        ground_speed, ground_track = ground_motion
+        trajectory = []
+
+        for elapsed_seconds in range(
+            0,
+            prediction_seconds + 1,
+            sample_interval_seconds,
+        ):
+            displacement = Calculator.predict_ctrv_position(
+                ground_speed,
+                ground_track,
+                turn_rate,
+                elapsed_seconds,
+            )
+
+            if displacement is None:
+                return None
+
+            east, north = displacement
+
+            longitude, latitude = (
+                Calculator.local_coordinates_to_gps(
+                    east,
+                    north,
+                    self.longitude,
+                    self.latitude,
+                )
+            )
+
+            trajectory.append([latitude, longitude])
+
+        return trajectory
+
 
     def get_nearest_distance_from_user(self):
         return Calculator.nearest_approach(self.bearing_from_user, self.distance_from_user, self.heading)

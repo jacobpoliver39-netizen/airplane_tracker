@@ -15,6 +15,7 @@ export const mockAircraft: Aircraft[] = [
     nearest_distance_time: 96,
     curved_nearest_distance: null,
     curved_nearest_distance_time: null,
+    curved_trajectory: null,
   },
   {
     id: "DLH3VK",
@@ -29,6 +30,7 @@ export const mockAircraft: Aircraft[] = [
     nearest_distance_time: 142,
     curved_nearest_distance: null,
     curved_nearest_distance_time: null,
+    curved_trajectory: null,
   },
   {
     id: "WZZ4AB",
@@ -43,6 +45,7 @@ export const mockAircraft: Aircraft[] = [
     nearest_distance_time: 118,
     curved_nearest_distance: null,
     curved_nearest_distance_time: null,
+    curved_trajectory: null,
   },
   {
     id: "RYR82KM",
@@ -57,6 +60,7 @@ export const mockAircraft: Aircraft[] = [
     nearest_distance_time: null,
     curved_nearest_distance: null,
     curved_nearest_distance_time: null,
+    curved_trajectory: null,
   },
   {
     id: "SXS7LP",
@@ -71,6 +75,7 @@ export const mockAircraft: Aircraft[] = [
     nearest_distance_time: 42,
     curved_nearest_distance: null,
     curved_nearest_distance_time: null,
+    curved_trajectory: null,
   },
   {
     id: "THY6QX",
@@ -85,6 +90,7 @@ export const mockAircraft: Aircraft[] = [
     nearest_distance_time: 205,
     curved_nearest_distance: null,
     curved_nearest_distance_time: null,
+    curved_trajectory: null,
   },
 ];
 

@@ -169,3 +169,265 @@
 2026-11-10 14:00:42,850 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE6TY
 2026-11-10 14:00:42,851 | INFO | aircraft_tracker | Aircraft removed from tracker: FLWME 6
 2026-11-10 14:00:42,853 | INFO | main | Polling cycle completed: 12 aircraft observed, 9 currently tracked
+2026-11-10 17:55:06,959 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:55:06,960 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 17:55:06,960 | INFO | aircraft_tracker | Aircraft added to tracker: THY4DC
+2026-11-10 17:55:06,961 | INFO | aircraft_tracker | Aircraft added to tracker: THY4ZP
+2026-11-10 17:55:06,961 | INFO | aircraft_tracker | Aircraft added to tracker: BAW60
+2026-11-10 17:55:06,962 | INFO | aircraft_tracker | Aircraft added to tracker: JAF76C
+2026-11-10 17:55:06,962 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:55:06,963 | INFO | aircraft_tracker | Aircraft added to tracker: PGT81BB
+2026-11-10 17:55:06,963 | INFO | aircraft_tracker | Aircraft added to tracker: SEH840
+2026-11-10 17:55:06,964 | INFO | aircraft_tracker | Aircraft added to tracker: QTR79Q
+2026-11-10 17:55:06,964 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:55:06,965 | INFO | aircraft_tracker | Aircraft added to tracker: EZY26NC
+2026-11-10 17:55:06,965 | INFO | aircraft_tracker | Aircraft added to tracker: CFG6KW
+2026-11-10 17:55:06,966 | INFO | aircraft_tracker | Aircraft added to tracker: CXI6LP
+2026-11-10 17:55:06,966 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:55:06,967 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:55:06,967 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:55:06,967 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:55:22,270 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:55:22,271 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:55:22,271 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:55:22,272 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:55:22,273 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:55:22,274 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:55:22,275 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:55:37,563 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:55:37,563 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:55:37,564 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:55:37,564 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:55:37,565 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:55:37,565 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:55:37,566 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:55:53,053 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:55:53,054 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:55:53,054 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:55:53,055 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:55:53,056 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:55:53,056 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:55:53,057 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:56:08,727 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:56:08,728 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:56:08,728 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:56:08,729 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:56:08,730 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:56:08,730 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:56:08,731 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:56:24,018 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:56:24,019 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:56:24,019 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:56:24,020 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:56:24,020 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:56:24,021 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:56:24,022 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:56:39,333 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:56:39,333 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:56:39,334 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:56:39,335 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:56:39,335 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:56:39,335 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:56:39,336 | INFO | main | Polling cycle completed: 14 aircraft observed, 11 currently tracked
+2026-11-10 17:56:54,623 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:56:54,624 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:56:54,625 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:56:54,625 | INFO | aircraft_tracker | Aircraft removed from tracker: THY4DC
+2026-11-10 17:56:54,625 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:56:54,626 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:56:54,627 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:56:54,628 | INFO | main | Polling cycle completed: 13 aircraft observed, 10 currently tracked
+2026-11-10 17:57:10,122 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:57:10,122 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:57:10,123 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:57:10,124 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:57:10,124 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:57:10,125 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:57:10,125 | INFO | main | Polling cycle completed: 13 aircraft observed, 10 currently tracked
+2026-11-10 17:57:25,419 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:57:25,419 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:57:25,420 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:57:25,420 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:57:25,421 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:57:25,422 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:57:25,422 | INFO | main | Polling cycle completed: 13 aircraft observed, 10 currently tracked
+2026-11-10 17:57:40,857 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:57:40,858 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:57:40,858 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:57:40,859 | INFO | aircraft_tracker | Aircraft removed from tracker: JAF76C
+2026-11-10 17:57:40,860 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:57:40,860 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:57:40,860 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:57:40,861 | INFO | main | Polling cycle completed: 12 aircraft observed, 9 currently tracked
+2026-11-10 17:57:56,174 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:57:56,175 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:57:56,175 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:57:56,176 | INFO | aircraft_tracker | Aircraft removed from tracker: EZY26NC
+2026-11-10 17:57:56,177 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:57:56,177 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:57:56,178 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:57:56,178 | INFO | main | Polling cycle completed: 11 aircraft observed, 8 currently tracked
+2026-11-10 17:58:11,663 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:58:11,664 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:58:11,664 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:58:11,665 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:58:11,665 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:58:11,666 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:58:11,666 | INFO | main | Polling cycle completed: 11 aircraft observed, 8 currently tracked
+2026-11-10 17:59:01,151 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:59:01,152 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 17:59:01,153 | INFO | aircraft_tracker | Aircraft added to tracker: BAW60
+2026-11-10 17:59:01,153 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:59:01,154 | INFO | aircraft_tracker | Aircraft added to tracker: SEH840
+2026-11-10 17:59:01,154 | INFO | aircraft_tracker | Aircraft added to tracker: QTR33J
+2026-11-10 17:59:01,155 | INFO | aircraft_tracker | Aircraft added to tracker: QTR79Q
+2026-11-10 17:59:01,155 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:59:01,156 | INFO | aircraft_tracker | Aircraft added to tracker: CXI6LP
+2026-11-10 17:59:01,156 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:59:01,157 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:59:01,157 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:59:01,157 | INFO | main | Polling cycle completed: 9 aircraft observed, 6 currently tracked
+2026-11-10 17:59:16,463 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:59:16,464 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:59:16,464 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:59:16,465 | INFO | aircraft_tracker | Aircraft removed from tracker: CXI6LP
+2026-11-10 17:59:16,465 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:59:16,466 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:59:16,466 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:59:16,467 | INFO | main | Polling cycle completed: 8 aircraft observed, 5 currently tracked
+2026-11-10 17:59:31,755 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:59:31,756 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:59:31,756 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:59:31,757 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:59:31,757 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:59:31,758 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:59:31,759 | INFO | main | Polling cycle completed: 8 aircraft observed, 5 currently tracked
+2026-11-10 17:59:47,065 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 17:59:47,066 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 17:59:47,067 | INFO | aircraft_tracker | Aircraft added to tracker: SWEEPER2
+2026-11-10 17:59:47,067 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE51Q
+2026-11-10 17:59:47,068 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE596
+2026-11-10 17:59:47,068 | INFO | aircraft_tracker | Aircraft removed from tracker: SWEEPER2
+2026-11-10 17:59:47,069 | INFO | main | Polling cycle completed: 8 aircraft observed, 5 currently tracked
+2026-11-10 18:13:48,011 | INFO | aircraft_tracker | Aircraft added to tracker: AEE51Q
+2026-11-10 18:13:48,012 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 18:13:48,013 | INFO | aircraft_tracker | Aircraft added to tracker: RAM911T
+2026-11-10 18:13:48,013 | INFO | aircraft_tracker | Aircraft added to tracker: VIO7D
+2026-11-10 18:13:48,014 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 18:13:48,014 | INFO | aircraft_tracker | Aircraft added to tracker: QTR28N
+2026-11-10 18:13:48,015 | INFO | aircraft_tracker | Aircraft added to tracker: EDW67
+2026-11-10 18:13:48,015 | INFO | aircraft_tracker | Aircraft added to tracker: CFG433
+2026-11-10 18:13:48,016 | INFO | aircraft_tracker | Aircraft added to tracker: THY6BK
+2026-11-10 18:13:48,016 | INFO | aircraft_tracker | Aircraft added to tracker: MSR732
+2026-11-10 18:13:48,017 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:13:48,017 | INFO | aircraft_tracker | Aircraft removed from tracker: EJU5267
+2026-11-10 18:13:48,018 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE552
+2026-11-10 18:13:48,019 | INFO | main | Polling cycle completed: 11 aircraft observed, 9 currently tracked
+2026-11-10 18:14:03,330 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 18:14:03,331 | INFO | aircraft_tracker | Aircraft added to tracker: SXS12C
+2026-11-10 18:14:03,331 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:14:03,332 | INFO | aircraft_tracker | Aircraft removed from tracker: EJU5267
+2026-11-10 18:14:03,332 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE552
+2026-11-10 18:14:03,333 | INFO | main | Polling cycle completed: 12 aircraft observed, 10 currently tracked
+2026-11-10 18:14:18,858 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 18:14:18,859 | INFO | aircraft_tracker | Aircraft added to tracker: SEH791
+2026-11-10 18:14:18,859 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:14:18,860 | INFO | aircraft_tracker | Aircraft removed from tracker: EJU5267
+2026-11-10 18:14:18,860 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE552
+2026-11-10 18:14:18,861 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 18:14:34,175 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 18:14:34,176 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:14:34,176 | INFO | aircraft_tracker | Aircraft removed from tracker: EJU5267
+2026-11-10 18:14:34,177 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE552
+2026-11-10 18:14:34,177 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 18:14:49,470 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 18:14:49,471 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:14:49,471 | INFO | aircraft_tracker | Aircraft removed from tracker: EJU5267
+2026-11-10 18:14:49,472 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE552
+2026-11-10 18:14:49,472 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 18:15:04,813 | INFO | aircraft_tracker | Aircraft added to tracker: EJU5267
+2026-11-10 18:15:04,814 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:15:04,814 | INFO | aircraft_tracker | Aircraft removed from tracker: EJU5267
+2026-11-10 18:15:04,815 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE552
+2026-11-10 18:15:04,816 | INFO | main | Polling cycle completed: 13 aircraft observed, 11 currently tracked
+2026-11-10 18:15:20,104 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:15:20,105 | INFO | main | Polling cycle completed: 12 aircraft observed, 12 currently tracked
+2026-11-10 18:15:35,390 | INFO | main | Polling cycle completed: 12 aircraft observed, 12 currently tracked
+2026-11-10 18:15:50,730 | INFO | main | Polling cycle completed: 12 aircraft observed, 12 currently tracked
+2026-11-10 18:16:06,027 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:16:06,028 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:16:06,028 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:16:21,516 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:16:21,517 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:16:21,517 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:16:36,811 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:16:36,811 | INFO | aircraft_tracker | Aircraft removed from tracker: QTR28N
+2026-11-10 18:16:36,812 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:16:36,812 | INFO | main | Polling cycle completed: 12 aircraft observed, 11 currently tracked
+2026-11-10 18:16:52,319 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:16:52,320 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:16:52,320 | INFO | main | Polling cycle completed: 12 aircraft observed, 11 currently tracked
+2026-11-10 18:17:07,613 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:17:07,614 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:17:07,614 | INFO | main | Polling cycle completed: 12 aircraft observed, 11 currently tracked
+2026-11-10 18:17:23,171 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:17:23,171 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:17:23,172 | INFO | main | Polling cycle completed: 12 aircraft observed, 11 currently tracked
+2026-11-10 18:17:38,470 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:17:38,471 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:17:38,472 | INFO | main | Polling cycle completed: 12 aircraft observed, 11 currently tracked
+2026-11-10 18:17:53,969 | INFO | aircraft_tracker | Aircraft added to tracker: AUA80
+2026-11-10 18:17:53,969 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:17:53,970 | INFO | aircraft_tracker | Aircraft added to tracker: MSR770
+2026-11-10 18:17:53,971 | INFO | aircraft_tracker | Aircraft removed from tracker: RAM911T
+2026-11-10 18:17:53,971 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:17:53,972 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:18:09,311 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:18:09,312 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:18:09,313 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:18:24,617 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:18:24,617 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:18:24,618 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:21:43,367 | INFO | aircraft_tracker | Aircraft added to tracker: EWG7KC
+2026-11-10 18:21:43,368 | INFO | aircraft_tracker | Aircraft added to tracker: T7KKT
+2026-11-10 18:21:43,368 | INFO | aircraft_tracker | Aircraft added to tracker: VIO7D
+2026-11-10 18:21:43,369 | INFO | aircraft_tracker | Aircraft added to tracker: AEE596
+2026-11-10 18:21:43,370 | INFO | aircraft_tracker | Aircraft added to tracker: AUA80
+2026-11-10 18:21:43,370 | INFO | aircraft_tracker | Aircraft added to tracker: SEH791
+2026-11-10 18:21:43,371 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:21:43,371 | INFO | aircraft_tracker | Aircraft added to tracker: THY6BK
+2026-11-10 18:21:43,372 | INFO | aircraft_tracker | Aircraft added to tracker: TUI90C
+2026-11-10 18:21:43,372 | INFO | aircraft_tracker | Aircraft added to tracker: SXS12C
+2026-11-10 18:21:43,373 | INFO | aircraft_tracker | Aircraft added to tracker: MSR770
+2026-11-10 18:21:43,373 | INFO | aircraft_tracker | Aircraft added to tracker: OCN5Q
+2026-11-10 18:21:43,374 | INFO | aircraft_tracker | Aircraft added to tracker: AEE552
+2026-11-10 18:21:43,374 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:21:43,375 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:21:58,841 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:21:58,841 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:21:58,842 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:22:14,131 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:22:14,132 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:22:14,133 | INFO | main | Polling cycle completed: 13 aircraft observed, 12 currently tracked
+2026-11-10 18:22:29,492 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:22:29,493 | INFO | aircraft_tracker | Aircraft added to tracker: TRA1F
+2026-11-10 18:22:29,494 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:22:29,494 | INFO | main | Polling cycle completed: 14 aircraft observed, 13 currently tracked
+2026-11-10 18:22:44,787 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:22:44,787 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:22:44,788 | INFO | main | Polling cycle completed: 14 aircraft observed, 13 currently tracked
+2026-11-10 18:23:00,085 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:23:00,085 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:23:00,086 | INFO | main | Polling cycle completed: 14 aircraft observed, 13 currently tracked
+2026-11-10 18:23:15,379 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:23:15,380 | INFO | aircraft_tracker | Aircraft removed from tracker: AEE5XQ
+2026-11-10 18:23:15,381 | INFO | main | Polling cycle completed: 14 aircraft observed, 13 currently tracked
+2026-11-10 18:23:30,678 | INFO | aircraft_tracker | Aircraft added to tracker: AEE5XQ
+2026-11-10 18:23:30,678 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 18:23:45,961 | INFO | aircraft_tracker | Aircraft removed from tracker: THY6BK
+2026-11-10 18:23:45,961 | INFO | main | Polling cycle completed: 13 aircraft observed, 13 currently tracked
+2026-11-10 18:24:01,248 | INFO | aircraft_tracker | Aircraft added to tracker: ELY324
+2026-11-10 18:24:01,249 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 18:24:16,720 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 18:24:32,022 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked
+2026-11-10 18:24:47,348 | INFO | main | Polling cycle completed: 14 aircraft observed, 14 currently tracked

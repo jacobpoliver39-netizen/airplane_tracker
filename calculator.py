@@ -50,6 +50,36 @@ class Calculator:
 
         return east, north
 
+    
+    @staticmethod
+    def local_coordinates_to_gps(
+        east,
+        north,
+        reference_longitude,
+        reference_latitude,
+    ):
+        """
+        Convert local east/north distances in miles back to GPS coordinates.
+        Uses the same local equirectangular approximation as
+        gps_to_local_coordinates().
+        """
+        earth_radius_miles = 3959
+
+        latitude_radians = math.radians(reference_latitude)
+
+        latitude = reference_latitude + math.degrees(
+            north / earth_radius_miles
+        )
+
+        longitude = reference_longitude + math.degrees(
+            east / (
+                earth_radius_miles * math.cos(latitude_radians)
+            )
+        )
+
+        return longitude, latitude
+
+
     @staticmethod
     def bearing_angle_from_user_to_plane(plane_lon, plane_lat, user_lon, user_lat):
 

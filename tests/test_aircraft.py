@@ -1,4 +1,5 @@
 from aircraft import Aircraft
+from calculator import Calculator
 import pytest
 
 
@@ -508,4 +509,226 @@ def test_curved_nearest_approach_uses_estimated_ground_motion(monkeypatch):
     assert distance < aircraft.distance_from_user
     assert 0 <= time <= 60
 
+
+def test_get_curved_trajectory_returns_none_without_sufficient_history():
+    aircraft = Aircraft(
+        callsign="TEST123",
+        timestamp=1000,
+        longitude=1.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=270.0,
+        country_of_origin="Test",
+        velocity=120.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    assert aircraft.get_curved_trajectory() is None
+
+
+def test_get_curved_trajectory_returns_gps_coordinates(monkeypatch):
+    aircraft = Aircraft(
+        callsign="TEST456",
+        timestamp=1000,
+        longitude=1.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=270.0,
+        country_of_origin="Test",
+        velocity=120.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    monkeypatch.setattr(
+        aircraft,
+        "get_estimated_ground_motion",
+        lambda: (120.0, 270.0),
+    )
+    monkeypatch.setattr(
+        aircraft,
+        "get_estimated_turn_rate",
+        lambda: 0.5,
+    )
+
+    trajectory = aircraft.get_curved_trajectory()
+
+    assert trajectory is not None
+    assert len(trajectory) == 13
+
+    # First point is the aircraft's current position.
+    assert trajectory[0] == [
+        aircraft.latitude,
+        aircraft.longitude,
+    ]
+
+    # Every point is a valid latitude/longitude pair.
+    for latitude, longitude in trajectory:
+        assert -90 <= latitude <= 90
+        assert -180 <= longitude <= 180
+
+    # The aircraft should move from its starting position.
+    assert trajectory[-1] != trajectory[0]
+
+def test_evaluate_prediction_snapshot_measures_straight_line_error():
+    aircraft = Aircraft(
+        callsign="TEST_EVAL",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=90.0,
+        country_of_origin="Test",
+        velocity=360.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    snapshot = {
+        "timestamp": 1000,
+        "longitude": 0.0,
+        "latitude": 0.0,
+        "straight_speed": 360.0,
+        "straight_heading": 90.0,
+        "ground_motion": None,
+        "turn_rate": None,
+    }
+
+    # At 360 mph, the aircraft travels one mile east in 10 seconds.
+    actual_longitude, actual_latitude = (
+        Calculator.local_coordinates_to_gps(
+            1.0, 0.0, 0.0, 0.0
+        )
+    )
+
+    result = aircraft.evaluate_prediction_snapshot(
+        snapshot,
+        actual_timestamp=1010,
+        actual_longitude=actual_longitude,
+        actual_latitude=actual_latitude,
+    )
+
+    assert result is not None
+    assert result["elapsed_seconds"] == 10
+    assert result["straight_error_miles"] < 0.01
+    assert result["curved_error_miles"] is None
+
+def test_evaluate_prediction_snapshot_measures_curved_error():
+    aircraft = Aircraft(
+        callsign="TEST_CURVED_EVAL",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=90.0,
+        country_of_origin="Test",
+        velocity=360.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    snapshot = {
+        "timestamp": 1000,
+        "longitude": 0.0,
+        "latitude": 0.0,
+        "straight_speed": 360.0,
+        "straight_heading": 90.0,
+        "ground_motion": (360.0, 90.0),
+        "turn_rate": 1.0,
+    }
+
+    # Generate the actual position using the same CTRV model.
+    east, north = Calculator.predict_ctrv_position(
+        360.0,
+        90.0,
+        1.0,
+        10,
+    )
+
+    actual_longitude, actual_latitude = (
+        Calculator.local_coordinates_to_gps(
+            east,
+            north,
+            0.0,
+            0.0,
+        )
+    )
+
+    result = aircraft.evaluate_prediction_snapshot(
+        snapshot,
+        actual_timestamp=1010,
+        actual_longitude=actual_longitude,
+        actual_latitude=actual_latitude,
+    )
+
+    assert result is not None
+    assert result["elapsed_seconds"] == 10
+    assert result["curved_error_miles"] < 0.01
+    assert result["straight_error_miles"] > result["curved_error_miles"]
+
+def test_update_info_records_prediction_error():
+    aircraft = Aircraft(
+        callsign="TEST_RECORD",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=90.0,
+        country_of_origin="Test",
+        velocity=360.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    aircraft.update_info(
+        new_longitude=0.001,
+        new_latitude=0.0,
+        new_timestamp=1010,
+        new_altitude=10000,
+        new_heading=90.0,
+        new_velocity=360.0,
+    )
+
+    assert len(aircraft.prediction_errors) == 1
+
+    result = aircraft.prediction_errors[0]
+
+    assert result["timestamp"] == 1000
+    assert result["elapsed_seconds"] == 10
+    assert result["straight_error_miles"] is not None
+
+def test_update_info_ignores_duplicate_timestamp_for_evaluation():
+    aircraft = Aircraft(
+        callsign="TEST_DUPLICATE",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=90.0,
+        country_of_origin="Test",
+        velocity=360.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    aircraft.update_info(
+        new_longitude=0.001,
+        new_latitude=0.0,
+        new_timestamp=1010,
+        new_altitude=10000,
+        new_heading=90.0,
+        new_velocity=360.0,
+    )
+
+    aircraft.update_info(
+        new_longitude=0.002,
+        new_latitude=0.0,
+        new_timestamp=1010,
+        new_altitude=10000,
+        new_heading=90.0,
+        new_velocity=360.0,
+    )
+
+    assert len(aircraft.prediction_errors) == 1
 

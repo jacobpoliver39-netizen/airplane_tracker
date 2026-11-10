@@ -12,4 +12,5 @@ export interface Aircraft {
   nearest_distance_time: number | null;
   curved_nearest_distance: number | null;
   curved_nearest_distance_time: number | null;
+  curved_trajectory: [number, number][] | null;
 }

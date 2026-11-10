@@ -104,6 +104,20 @@ export default function AircraftMap({
               interactive={false}
             />
 
+            {plane.curved_trajectory &&
+              plane.curved_trajectory.length > 1 && (
+                <Polyline
+                  positions={plane.curved_trajectory}
+                  pathOptions={{
+                    color: selected ? "#a78bfa" : "#34d399",
+                    weight: selected ? 4 : 2.5,
+                    opacity: 0.9,
+                    lineCap: "round",
+                  }}
+                  interactive={false}
+                />
+              )}
+
             <Marker
               position={[plane.latitude, plane.longitude]}
               icon={createAircraftIcon(plane.heading, selected)}

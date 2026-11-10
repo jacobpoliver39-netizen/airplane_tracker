@@ -70,6 +70,7 @@ def get_aircraft():
             "curved_nearest_distance_time": (
                 curved_approach[1] if curved_approach is not None else None
             ),
+            "curved_trajectory": plane.get_curved_trajectory(),
         })
 
     return aircraft_list
