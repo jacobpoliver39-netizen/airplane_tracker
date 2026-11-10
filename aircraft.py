@@ -1,7 +1,11 @@
 
 #Maybe add distance history? Heading History?
 
+import logging
+
 from calculator import Calculator
+
+logger = logging.getLogger(__name__)
 
 class Aircraft:
 
@@ -14,13 +18,13 @@ class Aircraft:
         self.heading = heading
         self.country_of_origin = country_of_origin
         self.velocity = velocity
-        print("Velocity: ", self.velocity)
+        logger.debug("%s initialized with velocity %.2f mph", self.callsign, self.velocity)
         self.user_longitude = user_longitude
         self.user_latitude = user_latitude
         self.distance_from_user = self.get_distance_from_user()
         self.location_history = {}
         self.bearing_from_user = self.get_bearing_from_user_to_plane()
-        print("Aircraft Created")
+        logger.debug("Aircraft created: %s", self.callsign)
         self.update_location_history()
 
     def update_info(self, new_longitude, new_latitude, new_timestamp, new_altitude, new_heading, new_velocity):
@@ -33,12 +37,12 @@ class Aircraft:
         self.distance_from_user = self.get_distance_from_user()
         self.bearing_from_user = self.get_bearing_from_user_to_plane()
         self.update_location_history()
-        print("Aircraft Info Updated")
+        logger.debug("Aircraft information updated: %s", self.callsign)
 
     def update_location_history(self):
         if self.timestamp not in self.location_history:
             self.location_history[self.timestamp] = Position(self.longitude, self.latitude, self.distance_from_user, self.heading, self.bearing_from_user)
-            print("History Updated")
+            logger.debug("Location history updated: %s", self.callsign)
 
     def get_distance_from_user(self):
         distance_from_user =  Calculator.calculate_haversine_distance(self.user_longitude, self.user_latitude, self.longitude, self.latitude)
@@ -79,6 +83,43 @@ class Aircraft:
 
     def get_nearest_distance_time(self):
         return Calculator.nearest_approach_time(self.bearing_from_user, self.distance_from_user, self.heading, self.velocity)
+
+    
+    def get_approach_status(self):
+        """Classify the aircraft's current approach situation."""
+        positions = sorted(self.location_history.items())
+
+        # Check whether the aircraft was getting closer and
+        # has now started moving farther away.
+        if len(positions) >= 3:
+            earlier_distance = positions[-3][1].get_distance_from_user()
+            previous_distance = positions[-2][1].get_distance_from_user()
+            current_distance = self.distance_from_user
+
+            if (
+                previous_distance < earlier_distance
+                and current_distance > previous_distance
+            ):
+                return "passed"
+
+        # If the geometry predicts a future closest point,
+        # classify the aircraft as approaching.
+        time_to_closest = self.get_nearest_distance_time()
+
+        if time_to_closest is not None and time_to_closest > 0:
+            return "approaching"
+
+        return "moving_away"
+
+    def get_closest_distance_so_far(self):
+        """Return the smallest recorded distance from the user."""
+        if not self.location_history:
+            return self.distance_from_user
+
+        return min(
+            position.get_distance_from_user()
+            for position in self.location_history.values()
+        )
 
     def get_bearing_from_user_to_plane(self):
         return Calculator.bearing_angle_from_user_to_plane(self.longitude, self.latitude, self.user_longitude, self.user_latitude)

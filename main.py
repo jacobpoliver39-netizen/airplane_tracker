@@ -1,12 +1,17 @@
 
+import logging
 import time
 import requests
 import calculator
 from aircraft import Aircraft
 from tracker_state import aircraft_tracker
-from commands import RemoveMissingAircraftCommand
+from commands import RemoveMissingAircraftCommand, RemoveLowAltitudeAircraftCommand
+from logging_service import LoggingService
+
+logger = logging.getLogger(__name__)
 
 def main(stop_event=None):
+    LoggingService.initialize()
 
     api = "https://opensky-network.org/api/states/all"
     params1 = {#Botsari
@@ -56,7 +61,7 @@ def main(stop_event=None):
                     raise ValueError("Malformed aircraft state in response")
 
         except (requests.RequestException, ValueError) as error:
-            print(f"OpenSky request failed or returned invalid data: {error}")
+            logger.warning("OpenSky request failed or returned invalid data: %s", error)
 
             if stop_event is None:
                 time.sleep(15)
@@ -66,8 +71,9 @@ def main(stop_event=None):
             continue
 
 
+        observed_callsigns = set()
+
         if states is not None:
-            observed_callsigns = set()
 
             for aircraft_data in states:
                 callsign = aircraft_data[1]
@@ -127,18 +133,22 @@ def main(stop_event=None):
                 oAircraftTracker, observed_callsigns
             )
             command.execute()
+            command = RemoveLowAltitudeAircraftCommand(oAircraftTracker)
+            command.execute()
 
         else:
-            print("No Aircraft Found")
+            logger.info("OpenSky returned no aircraft states")
             command = RemoveMissingAircraftCommand(
                 oAircraftTracker, set()
             )
             command.execute()
 
 
-        #oAircraftTracker.display_all_callsigns() #shows all callsigns
-        oAircraftTracker.display_aircraft_info_nearest_to_farthest()
-        print("Iteration Completed")
+        logger.info(
+            "Polling cycle completed: %d aircraft observed, %d currently tracked",
+            len(observed_callsigns),
+            len(oAircraftTracker.aircrafts),
+        )
         if stop_event is None:
             time.sleep(15)
         else:

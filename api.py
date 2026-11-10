@@ -6,11 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from main import main
+from logging_service import LoggingService
 from tracker_state import aircraft_tracker
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    LoggingService.initialize()
     stop_event = threading.Event()
     polling_thread = threading.Thread(
         target=main,
@@ -25,6 +27,7 @@ async def lifespan(app: FastAPI):
     finally:
         stop_event.set()
         polling_thread.join(timeout=10)
+        LoggingService.reset()
 
 
 app = FastAPI(title="JacobSky API", lifespan=lifespan)
@@ -43,6 +46,7 @@ def root():
     return {"message": "JacobSky API is running"}
 
 
+
 @app.get("/aircraft")
 def get_aircraft():
     aircraft_list = []
@@ -57,6 +61,9 @@ def get_aircraft():
             "speed": plane.velocity,
             "heading": plane.heading,
             "distance": plane.distance_from_user,
+            "nearest_distance": plane.get_nearest_distance_from_user(),
+            "nearest_distance_time": plane.get_nearest_distance_time(),
         })
 
     return aircraft_list
+

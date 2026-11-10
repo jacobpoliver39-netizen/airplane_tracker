@@ -1,6 +1,14 @@
 # Class to track aircraft in relation to a given position.
 
+import logging
+
+import logging
+
 from ranking_strategies import NearestStrategy, RankingStrategy
+
+logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
 
 
 class AircraftTracker:
@@ -21,11 +29,11 @@ class AircraftTracker:
     def add_aircraft(self, aircraft):
         callsign = aircraft.callsign
         self.aircrafts[callsign] = aircraft
-        print(callsign, " Added to List")
+        logger.info("Aircraft added to tracker: %s", callsign)
 
     def remove_aircraft(self, callsign):
         del self.aircrafts[callsign]
-        print(callsign, " Removed From List")
+        logger.info("Aircraft removed from tracker: %s", callsign)
 
     def display_all_callsigns(self):
         for callsign in self.aircrafts:
