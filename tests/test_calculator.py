@@ -136,6 +136,61 @@ def test_turn_rate_returns_positive_value_for_clockwise_turn():
     assert rate is not None
     assert rate > 0
 
+def test_turn_rate_returns_negative_value_for_counterclockwise_turn():
+    # A northbound aircraft gradually turns toward the west.
+    observations = [
+        (0, 0.000, 0.000),
+        (15, 0.000, 0.010),
+        (30, -0.003, 0.020),
+        (45, -0.010, 0.027),
+    ]
+
+    rate = Calculator.estimate_turn_rate(observations)
+
+    assert rate is not None
+    assert rate < 0
+
+def test_turn_rate_is_stable_with_small_gps_noise_during_straight_flight():
+    observations = [
+        (0, 0.00000, 0.00000),
+        (15, 0.01002, 0.00001),
+        (30, 0.01998, -0.00001),
+        (45, 0.03001, 0.00001),
+        (60, 0.03999, 0.00000),
+        (75, 0.05002, -0.00001),
+    ]
+
+    rate = Calculator.estimate_turn_rate(observations)
+
+    assert rate is not None
+    assert rate == pytest.approx(0.0, abs=0.01)
+
+def test_turn_rate_estimates_known_constant_turn():
+    expected_turn_rate = 0.2  # degrees per second
+    observations = []
+
+    for elapsed in range(0, 76, 15):
+        east, north = Calculator.predict_ctrv_position(
+            speed_mph=360,
+            ground_track_degrees=0,
+            turn_rate_degrees_per_second=expected_turn_rate,
+            elapsed_seconds=elapsed,
+        )
+
+        longitude, latitude = Calculator.local_coordinates_to_gps(
+            east,
+            north,
+            23.0,
+            40.6,
+        )
+
+        observations.append((1000 + elapsed, longitude, latitude))
+
+    estimated_rate = Calculator.estimate_turn_rate(observations)
+
+    assert estimated_rate is not None
+    assert estimated_rate == pytest.approx(expected_turn_rate, abs=0.02)
+
 
 def test_turn_rate_ignores_excessively_long_observation_gaps():
     observations = [
@@ -346,3 +401,22 @@ def test_nearest_approach_ctrv_turning_flight():
 
     assert distance < 2.0
     assert 0 < time <= 60
+
+def test_ground_motion_uses_multiple_observations():
+    # Aircraft travels east at approximately 240 mph.
+    # The final GPS observation contains a positional deviation.
+    observations = [
+        (1000, 23.0000, 40.6000),
+        (1015, 23.0130, 40.6000),
+        (1030, 23.0260, 40.6000),
+        (1045, 23.0500, 40.6000),
+    ]
+
+    result = Calculator.estimate_ground_motion(observations)
+
+    assert result is not None
+    speed, direction = result
+
+    # The earlier observations establish the underlying eastbound motion.
+    assert direction == pytest.approx(90.0, abs=0.5)
+    assert speed == pytest.approx(164.0, abs=50.0)

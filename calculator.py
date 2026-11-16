@@ -183,46 +183,89 @@ class Calculator:
         observations,
         max_gap_seconds=60,
         min_segment_distance_miles=0.05,
+        max_observations=6,
     ):
         """
-        Estimate ground speed and direction from the latest GPS interval.
+        Estimate ground speed and direction using recent GPS observations.
 
+        Fits east/north position against elapsed time using least squares.
         Returns (speed_mph, ground_track_degrees), or None if the
-        latest interval is invalid.
+        observation window is invalid or contains insufficient movement.
         """
         if len(observations) < 2:
             return None
 
-        earlier, later = observations[-2:]
+        recent = observations[-max_observations:]
 
-        earlier_time, earlier_lon, earlier_lat = earlier
-        later_time, later_lon, later_lat = later
+        # Require chronological observations with reasonable time gaps.
+        for earlier, later in zip(recent, recent[1:]):
+            elapsed = later[0] - earlier[0]
 
-        elapsed = later_time - earlier_time
+            if elapsed <= 0 or elapsed > max_gap_seconds:
+                return None
 
-        if elapsed <= 0 or elapsed > max_gap_seconds:
+        reference_time, reference_lon, reference_lat = recent[0]
+
+        positions = []
+
+        for timestamp, longitude, latitude in recent:
+            east, north = Calculator.gps_to_local_coordinates(
+                longitude,
+                latitude,
+                reference_lon,
+                reference_lat,
+            )
+
+            positions.append((
+                timestamp - reference_time,
+                east,
+                north,
+            ))
+
+        # Reject observations that collectively show too little movement.
+        total_east = positions[-1][1] - positions[0][1]
+        total_north = positions[-1][2] - positions[0][2]
+
+        if math.hypot(total_east, total_north) < min_segment_distance_miles:
             return None
 
-        distance = Calculator.calculate_haversine_distance(
-            earlier_lon,
-            earlier_lat,
-            later_lon,
-            later_lat,
+        # Calculate the mean observation time and coordinates.
+        mean_time = sum(p[0] for p in positions) / len(positions)
+        mean_east = sum(p[1] for p in positions) / len(positions)
+        mean_north = sum(p[2] for p in positions) / len(positions)
+
+        denominator = sum(
+            (p[0] - mean_time) ** 2
+            for p in positions
         )
 
-        if distance < min_segment_distance_miles:
+        if denominator == 0:
             return None
 
-        ground_speed = distance / elapsed * 3600
+        east_velocity = sum(
+            (p[0] - mean_time) * (p[1] - mean_east)
+            for p in positions
+        ) / denominator
 
-        ground_track = Calculator.bearing_angle_from_user_to_plane(
-            later_lon,
-            later_lat,
-            earlier_lon,
-            earlier_lat,
-        )
+        north_velocity = sum(
+            (p[0] - mean_time) * (p[2] - mean_north)
+            for p in positions
+        ) / denominator
 
-        return ground_speed, ground_track
+        speed_mph = math.hypot(
+            east_velocity,
+            north_velocity,
+        ) * 3600
+
+        if speed_mph == 0:
+            return None
+
+        ground_track = (
+            math.degrees(math.atan2(east_velocity, north_velocity))
+            + 360
+        ) % 360
+
+        return speed_mph, ground_track
 
 
     @staticmethod
