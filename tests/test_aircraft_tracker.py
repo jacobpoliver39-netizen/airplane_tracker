@@ -10,9 +10,6 @@ class FakeAircraft:
     def get_distance_from_user(self):
         return self.distance
 
-    def get_info(self):
-        return [("Callsign: ", self.callsign)]
-
 
 def test_sort_aircrafts_by_distance_nearest_first():
     tracker = AircraftTracker()
@@ -29,20 +26,20 @@ def test_sort_aircrafts_by_distance_nearest_first():
     ]
 
 
-def test_sort_aircrafts_by_distance_preserves_aircraft_objects():
+def test_sorted_aircrafts_preserves_aircraft_objects():
     tracker = AircraftTracker()
     aircraft = FakeAircraft("TEST123", 10.0)
     tracker.add_aircraft(aircraft)
 
-    sorted_aircraft = tracker.sort_aircrafts_by_distance()
+    sorted_aircraft = tracker.get_sorted_aircrafts()
 
     assert sorted_aircraft["TEST123"] is aircraft
 
 
-def test_sort_aircrafts_by_distance_with_no_aircraft():
+def test_sorted_aircrafts_with_no_aircraft():
     tracker = AircraftTracker()
 
-    assert tracker.sort_aircrafts_by_distance() == {}
+    assert tracker.get_sorted_aircrafts() == {}
 
 
 
@@ -83,7 +80,7 @@ def test_fastest_approach_strategy_ranks_highest_speed_first():
 def test_fastest_approach_strategy_ranks_missing_data_last():
     aircrafts = {
         "UNKNOWN": FakeAircraftWithApproachSpeed(
-            "UNKNOWN", 5.0, "Not Enough Data"
+            "UNKNOWN", 5.0, None
         ),
         "KNOWN": FakeAircraftWithApproachSpeed("KNOWN", 10.0, 120.0),
     }

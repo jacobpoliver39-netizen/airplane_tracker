@@ -1,24 +1,17 @@
 
 import type { Aircraft } from "../types/aircraft";
+import {
+  formatAltitude,
+  formatApproachTime,
+  formatHeading,
+  formatNumber,
+  formatSpeed,
+} from "../utils/format";
+
+const NO_APPROACH = "No future approach predicted";
 
 interface AircraftDetailsProps {
   aircraft: Aircraft | null;
-}
-
-function formatApproachTime(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
-    return "No future approach predicted";
-  }
-
-  const totalSeconds = Math.round(seconds);
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60;
-
-  if (minutes === 0) {
-    return `${remainingSeconds}s`;
-  }
-
-  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
 }
 
 export default function AircraftDetails({
@@ -53,22 +46,22 @@ export default function AircraftDetails({
         <div className="detail-grid">
           <div className="detail-item">
             <span>ALTITUDE</span>
-            <strong>{aircraft.altitude.toLocaleString()} ft</strong>
+            <strong>{formatAltitude(aircraft.altitude)}</strong>
           </div>
 
           <div className="detail-item">
             <span>GROUND SPEED</span>
-            <strong>{aircraft.speed} mph</strong>
+            <strong>{formatSpeed(aircraft.speed)}</strong>
           </div>
 
           <div className="detail-item">
             <span>HEADING</span>
-            <strong>{aircraft.heading.toString().padStart(3, "0")}°</strong>
+            <strong>{formatHeading(aircraft.heading)}</strong>
           </div>
 
           <div className="detail-item">
             <span>CURRENT DISTANCE</span>
-            <strong>{aircraft.distance.toFixed(1)} mi</strong>
+            <strong>{formatNumber(aircraft.distance, 1, "mi")}</strong>
           </div>
         </div>
       </div>
@@ -79,13 +72,13 @@ export default function AircraftDetails({
         <div className="detail-grid">
           <div className="detail-item">
             <span>CLOSEST DISTANCE</span>
-            <strong>{aircraft.nearest_distance.toFixed(1)} mi</strong>
+            <strong>{formatNumber(aircraft.nearest_distance, 1, "mi")}</strong>
           </div>
 
           <div className="detail-item">
             <span>TIME TO CLOSEST POINT</span>
             <strong>
-              {formatApproachTime(aircraft.nearest_distance_time)}
+              {formatApproachTime(aircraft.nearest_distance_time, NO_APPROACH)}
             </strong>
           </div>
         </div>
@@ -94,7 +87,7 @@ export default function AircraftDetails({
           Estimate assumes the aircraft maintains its current heading and speed.
         </p>
 
-                {aircraft.curved_nearest_distance !== null &&
+        {aircraft.curved_nearest_distance !== null &&
           aircraft.curved_nearest_distance_time !== null && (
             <div className="curved-approach">
               <h4>TURNING-FLIGHT ESTIMATE</h4>
@@ -103,7 +96,7 @@ export default function AircraftDetails({
                 <div className="detail-item">
                   <span>CLOSEST DISTANCE</span>
                   <strong>
-                    {aircraft.curved_nearest_distance.toFixed(1)} mi
+                    {formatNumber(aircraft.curved_nearest_distance, 1, "mi")}
                   </strong>
                 </div>
 
@@ -111,7 +104,8 @@ export default function AircraftDetails({
                   <span>TIME TO CLOSEST POINT</span>
                   <strong>
                     {formatApproachTime(
-                      aircraft.curved_nearest_distance_time
+                      aircraft.curved_nearest_distance_time,
+                      NO_APPROACH,
                     )}
                   </strong>
                 </div>
@@ -130,12 +124,12 @@ export default function AircraftDetails({
 
         <div className="coordinate-row">
           <span>Latitude</span>
-          <strong>{aircraft.latitude.toFixed(5)}°</strong>
+          <strong>{formatNumber(aircraft.latitude, 5, "°")}</strong>
         </div>
 
         <div className="coordinate-row">
           <span>Longitude</span>
-          <strong>{aircraft.longitude.toFixed(5)}°</strong>
+          <strong>{formatNumber(aircraft.longitude, 5, "°")}</strong>
         </div>
       </div>
 

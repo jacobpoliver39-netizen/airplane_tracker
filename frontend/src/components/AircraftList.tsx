@@ -1,26 +1,17 @@
 
 import type { Aircraft } from "../types/aircraft";
+import {
+  formatAltitude,
+  formatApproachTime,
+  formatHeading,
+  formatNumber,
+  formatSpeed,
+} from "../utils/format";
 
 interface AircraftListProps {
   aircraft: Aircraft[];
   selectedAircraftId: string | null;
   onSelectAircraft: (id: string) => void;
-}
-
-function formatApproachTime(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
-    return "No future approach";
-  }
-
-  const totalSeconds = Math.round(seconds);
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60;
-
-  if (minutes === 0) {
-    return `${remainingSeconds}s`;
-  }
-
-  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
 }
 
 export default function AircraftList({
@@ -51,24 +42,24 @@ export default function AircraftList({
             <div className="aircraft-card-top">
               <span className="aircraft-callsign">{plane.callsign}</span>
               <span className="aircraft-heading">
-                {plane.heading.toString().padStart(3, "0")}°
+                {formatHeading(plane.heading)}
               </span>
             </div>
 
             <div className="aircraft-card-stats">
               <div>
                 <span>ALTITUDE</span>
-                <strong>{plane.altitude.toLocaleString()} ft</strong>
+                <strong>{formatAltitude(plane.altitude)}</strong>
               </div>
 
               <div>
                 <span>SPEED</span>
-                <strong>{plane.speed} mph</strong>
+                <strong>{formatSpeed(plane.speed)}</strong>
               </div>
 
               <div>
                 <span>DISTANCE</span>
-                <strong>{plane.distance.toFixed(1)} mi</strong>
+                <strong>{formatNumber(plane.distance, 1, "mi")}</strong>
               </div>
             </div>
 
@@ -78,7 +69,7 @@ export default function AircraftList({
               <div className="approach-stats">
                 <div>
                   <span>Closest distance</span>
-                  <strong>{plane.nearest_distance.toFixed(1)} mi</strong>
+                  <strong>{formatNumber(plane.nearest_distance, 1, "mi")}</strong>
                 </div>
 
                 <div>
@@ -94,7 +85,7 @@ export default function AircraftList({
                     <div>
                       <span>Turning estimate</span>
                       <strong>
-                        {plane.curved_nearest_distance.toFixed(1)} mi
+                        {formatNumber(plane.curved_nearest_distance, 1, "mi")}
                       </strong>
                     </div>
 

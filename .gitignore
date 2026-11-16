@@ -20,3 +20,7 @@ Thumbs.db
 # Frontend dependencies and build output
 frontend/node_modules/
 frontend/dist/
+
+# Runtime output
+logs/
+data/

@@ -1,10 +1,20 @@
-
 import { useEffect, useState } from "react";
 import AircraftMap from "./components/AircraftMap";
 import AircraftList from "./components/AircraftList";
 import type { Aircraft } from "./types/aircraft";
 import "./App.css";
 import AircraftDetails from "./components/AircraftDetails";
+import { API_BASE_URL, POLL_INTERVAL_MS } from "./config";
+
+// "stale" = the last request failed but earlier data is still shown.
+type ConnectionStatus = "connecting" | "live" | "stale" | "offline";
+
+const STATUS_LABELS: Record<ConnectionStatus, string> = {
+  connecting: "CONNECTING",
+  live: "LIVE DATA",
+  stale: "STALE DATA",
+  offline: "OFFLINE",
+};
 
 function App() {
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(
@@ -14,43 +24,53 @@ function App() {
   const [distanceFilter, setDistanceFilter] = useState("all");
   const [altitudeFilter, setAltitudeFilter] = useState("all");
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
-  
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("connecting");
+
   useEffect(() => {
-  let isMounted = true;
+    let isMounted = true;
+    let hasData = false;
 
-  const fetchAircraft = async () => {
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/aircraft"
-      );
+    const fetchAircraft = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/aircraft`);
 
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.status}`);
+        }
+
+        const data: unknown = await response.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error("API returned an unexpected response");
+        }
+
+        if (isMounted) {
+          hasData = true;
+          setAircraft(data as Aircraft[]);
+          setConnectionStatus("live");
+        }
+      } catch (error) {
+        console.error("Failed to fetch aircraft:", error);
+
+        if (isMounted) {
+          setConnectionStatus(hasData ? "stale" : "offline");
+        }
       }
+    };
 
-      const data: Aircraft[] = await response.json();
+    fetchAircraft();
 
-      if (isMounted) {
-        setAircraft(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch aircraft:", error);
-    }
-  };
+    const intervalId = setInterval(fetchAircraft, POLL_INTERVAL_MS);
 
-  fetchAircraft();
-
-  const intervalId = setInterval(fetchAircraft, 5000);
-
-  return () => {
-    isMounted = false;
-    clearInterval(intervalId);
-  };
-}, []);
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const filteredAircraft = aircraft.filter((plane) => {
-    
-    const matchesSearch = plane.callsign
+    const matchesSearch = (plane.callsign ?? "")
       .toLowerCase()
       .includes(searchQuery.trim().toLowerCase());
 
@@ -58,18 +78,21 @@ function App() {
       distanceFilter === "all" ||
       plane.distance <= Number(distanceFilter);
 
+    // Aircraft with an unknown altitude only match "All altitudes".
+    const altitude = plane.altitude;
     const matchesAltitude =
       altitudeFilter === "all" ||
-      (altitudeFilter === "low" && plane.altitude < 10000) ||
-      (altitudeFilter === "medium" &&
-        plane.altitude >= 10000 &&
-        plane.altitude <= 25000) ||
-      (altitudeFilter === "high" && plane.altitude > 25000);
+      (altitude !== null &&
+        ((altitudeFilter === "low" && altitude < 10000) ||
+          (altitudeFilter === "medium" &&
+            altitude >= 10000 &&
+            altitude <= 25000) ||
+          (altitudeFilter === "high" && altitude > 25000)));
 
     return matchesSearch && matchesDistance && matchesAltitude;
   });
 
-    const selectedAircraft =
+  const selectedAircraft =
     filteredAircraft.find((plane) => plane.id === selectedAircraftId) ?? null;
 
   return (
@@ -83,9 +106,9 @@ function App() {
           </div>
         </div>
 
-        <div className="system-status">
+        <div className={`system-status system-status--${connectionStatus}`}>
           <span className="status-dot" />
-          LIVE DATA
+          {STATUS_LABELS[connectionStatus]}
         </div>
       </header>
 
@@ -168,30 +191,29 @@ function App() {
           Showing {filteredAircraft.length} of {aircraft.length} aircraft
         </div>
 
-        
-<div className="surveillance-layout">
-  <AircraftList
-    aircraft={filteredAircraft}
-    selectedAircraftId={selectedAircraftId}
-    onSelectAircraft={setSelectedAircraftId}
-  />
+        <div className="surveillance-layout">
+          <AircraftList
+            aircraft={filteredAircraft}
+            selectedAircraftId={selectedAircraftId}
+            onSelectAircraft={setSelectedAircraftId}
+          />
 
-  <div className="map-container">
-    <AircraftMap
-      aircraft={filteredAircraft}
-      selectedAircraftId={selectedAircraftId}
-      onSelectAircraft={setSelectedAircraftId}
-    />
-  </div>
-</div>
+          <div className="map-container">
+            <AircraftMap
+              aircraft={filteredAircraft}
+              selectedAircraftId={selectedAircraftId}
+              onSelectAircraft={setSelectedAircraftId}
+            />
+          </div>
+        </div>
 
-<AircraftDetails aircraft={selectedAircraft} />
+        <AircraftDetails aircraft={selectedAircraft} />
 
       </section>
 
       <footer className="footer">
         <span> / PERSONAL AVIATION PROJECT</span>
-        <span>DATA: SIMULATED</span>
+        <span>DATA: OPENSKY NETWORK</span>
       </footer>
     </main>
   );

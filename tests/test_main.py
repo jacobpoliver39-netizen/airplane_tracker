@@ -1,0 +1,228 @@
+import threading
+
+import pytest
+import requests
+
+import config
+import main
+from aircraft_tracker import AircraftTracker
+from logging_service import LoggingService
+from opensky_client import OpenSkyRateLimitError
+
+
+@pytest.fixture(autouse=True)
+def isolated_logging(tmp_path):
+    LoggingService.reset()
+    LoggingService.initialize(log_dir=tmp_path)
+    yield
+    LoggingService.reset()
+
+
+def make_state(
+    callsign="TEST123 ",
+    time_position=1000,
+    longitude=23.1,
+    latitude=40.7,
+    baro_altitude=3000.0,
+    on_ground=False,
+    velocity=200.0,
+    heading=90.0,
+):
+    """Build an OpenSky state array (17 fields, as the API returns)."""
+    return [
+        "abc123", callsign, "Greece", time_position, time_position,
+        longitude, latitude, baro_altitude, on_ground, velocity, heading,
+        0.0, None, baro_altitude, "1234", False, 0,
+    ]
+
+
+# --- parse_state ---------------------------------------------------------
+
+def test_parse_state_converts_units_and_strips_callsign():
+    observation = main.parse_state(make_state())
+
+    assert observation.callsign == "TEST123"
+    assert observation.altitude == pytest.approx(9842.5, abs=0.1)
+    assert observation.velocity == pytest.approx(447.39, abs=0.01)
+    assert observation.heading == 90.0
+    assert observation.on_ground is False
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["time_position", "longitude", "latitude", "velocity", "heading"],
+)
+def test_parse_state_skips_state_missing_required_field(field):
+    assert main.parse_state(make_state(**{field: None})) is None
+
+
+@pytest.mark.parametrize("callsign", [None, "", "   ", 42])
+def test_parse_state_skips_invalid_callsign(callsign):
+    assert main.parse_state(make_state(callsign=callsign)) is None
+
+
+def test_parse_state_skips_short_or_non_list_state():
+    assert main.parse_state(["abc", "TEST"]) is None
+    assert main.parse_state("not a state") is None
+
+
+def test_parse_state_keeps_missing_altitude_as_none():
+    observation = main.parse_state(make_state(baro_altitude=None))
+
+    assert observation.altitude is None
+
+
+def test_parse_state_keeps_zero_velocity():
+    observation = main.parse_state(make_state(velocity=0.0))
+
+    assert observation.velocity == 0
+
+
+# --- apply_states --------------------------------------------------------
+
+def test_apply_states_adds_and_updates_aircraft():
+    tracker = AircraftTracker()
+
+    main.apply_states(tracker, [make_state(time_position=1000)], 1000)
+    main.apply_states(
+        tracker, [make_state(time_position=1015, longitude=23.2)], 1015
+    )
+
+    aircraft = tracker.aircrafts["TEST123"]
+    assert aircraft.longitude == 23.2
+    assert len(aircraft.location_history) == 2
+
+
+def test_apply_states_skips_bad_states_without_failing():
+    tracker = AircraftTracker()
+    states = [
+        make_state(callsign="GOOD1"),
+        make_state(callsign="NOPOS", longitude=None),
+        "garbage",
+        make_state(callsign="NOSPEED", velocity=None),
+    ]
+
+    observed = main.apply_states(tracker, states, 1000)
+
+    assert observed == 1
+    assert set(tracker.aircrafts) == {"GOOD1"}
+
+
+def test_apply_states_never_adds_low_or_grounded_aircraft():
+    tracker = AircraftTracker()
+    states = [
+        make_state(callsign="GROUND", on_ground=True, baro_altitude=None),
+        make_state(callsign="LOW", baro_altitude=1.0),  # about 3 ft
+        make_state(callsign="HIGH"),
+    ]
+
+    main.apply_states(tracker, states, 1000)
+
+    assert set(tracker.aircrafts) == {"HIGH"}
+
+
+def test_apply_states_removes_tracked_aircraft_once_it_lands():
+    tracker = AircraftTracker()
+    main.apply_states(tracker, [make_state(time_position=1000)], 1000)
+
+    main.apply_states(
+        tracker,
+        [make_state(time_position=1015, on_ground=True, baro_altitude=None)],
+        1015,
+    )
+
+    assert tracker.aircrafts == {}
+
+
+def test_apply_states_keeps_missing_aircraft_for_grace_period():
+    tracker = AircraftTracker()
+    main.apply_states(tracker, [make_state(time_position=1000)], 1000)
+
+    # One missed poll, still inside the grace period.
+    main.apply_states(tracker, [], 1000 + config.POLL_INTERVAL_SECONDS)
+    assert "TEST123" in tracker.aircrafts
+
+    # Past the grace period.
+    main.apply_states(
+        tracker, None, 1000 + config.MISSING_AIRCRAFT_GRACE_SECONDS + 1
+    )
+    assert tracker.aircrafts == {}
+
+
+# --- polling loop --------------------------------------------------------
+
+class FakeClient:
+    """Returns or raises the queued results, then stops the loop."""
+
+    authenticated = False
+
+    def __init__(self, results, stop_event):
+        self._results = list(results)
+        self._stop_event = stop_event
+        self.calls = 0
+
+    def seconds_until_next_poll(self):
+        return config.POLL_INTERVAL_SECONDS
+
+    def get_states(self):
+        self.calls += 1
+
+        if len(self._results) <= 1:
+            self._stop_event.set()
+
+        result = self._results.pop(0)
+
+        if isinstance(result, Exception):
+            raise result
+
+        return result
+
+
+class RecordingEvent(threading.Event):
+    """Records requested waits without actually waiting."""
+
+    def __init__(self):
+        super().__init__()
+        self.waits = []
+
+    def wait(self, timeout=None):
+        self.waits.append(timeout)
+        return self.is_set()
+
+
+def test_failed_request_leaves_tracker_unchanged():
+    tracker = AircraftTracker()
+    main.apply_states(tracker, [make_state()], 1000)
+
+    stop_event = RecordingEvent()
+    client = FakeClient([requests.ConnectionError("down")], stop_event)
+
+    main.main(stop_event, client=client, tracker=tracker)
+
+    assert set(tracker.aircrafts) == {"TEST123"}
+
+
+def test_polling_loop_survives_unexpected_errors():
+    tracker = AircraftTracker()
+    stop_event = RecordingEvent()
+    client = FakeClient(
+        [
+            RuntimeError("unexpected bug"),
+            (1000, [make_state()]),
+        ],
+        stop_event,
+    )
+
+    main.main(stop_event, client=client, tracker=tracker)
+
+    assert client.calls == 2
+    assert set(tracker.aircrafts) == {"TEST123"}
+
+
+def test_polling_loop_waits_for_rate_limit_retry_after():
+    stop_event = RecordingEvent()
+    client = FakeClient([OpenSkyRateLimitError(3600)], stop_event)
+
+    main.main(stop_event, client=client, tracker=AircraftTracker())
+
+    assert stop_event.waits == [3600]

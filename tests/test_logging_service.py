@@ -6,7 +6,7 @@ from datetime import date
 
 import pytest
 
-from logging_service import LoggingService
+from logging_service import DailyFileHandler, LoggingService
 
 
 @pytest.fixture(autouse=True)
@@ -124,3 +124,35 @@ def test_reset_closes_handlers(tmp_path):
 
     # The service closes the handler, but not its external stream.
     assert console_handler._closed
+
+def test_daily_file_handler_switches_file_when_date_changes(tmp_path):
+    current = {"date": date(2026, 11, 10)}
+    handler = DailyFileHandler(tmp_path, lambda: current["date"])
+    logger = logging.getLogger("test.daily_rotation")
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    try:
+        logger.info("first day")
+        current["date"] = date(2026, 11, 11)
+        logger.info("second day")
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
+
+    first = (tmp_path / "jacobsky_2026-11-10.log").read_text(encoding="utf-8")
+    second = (tmp_path / "jacobsky_2026-11-11.log").read_text(encoding="utf-8")
+
+    assert "first day" in first and "second day" not in first
+    assert "second day" in second
+
+
+def test_close_allows_reinitialization(tmp_path):
+    first = LoggingService.initialize(log_dir=tmp_path)
+    LoggingService.close()
+
+    second = LoggingService.initialize(log_dir=tmp_path)
+
+    assert first is not second
+    assert second._handlers

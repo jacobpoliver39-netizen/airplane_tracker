@@ -132,7 +132,7 @@ def test_approach_speed_averages_multiple_intervals():
 
     assert aircraft.get_approach_speed_towards_user() == 240.0
 
-def test_approach_speed_with_one_position_returns_not_enough_data():
+def test_approach_speed_with_one_position_returns_none():
     aircraft = Aircraft(
         callsign="TESTONE",
         timestamp=1000,
@@ -146,7 +146,7 @@ def test_approach_speed_with_one_position_returns_not_enough_data():
         user_latitude=0.0,
     )
 
-    assert aircraft.get_approach_speed_towards_user() == "Not Enough Data"
+    assert aircraft.get_approach_speed_towards_user() is None
 
 
 def test_approach_speed_handles_out_of_order_timestamps():
@@ -475,11 +475,11 @@ def test_curved_nearest_approach_returns_none_with_insufficient_history():
     assert aircraft.get_curved_nearest_approach() is None
 
 
-def test_curved_nearest_approach_uses_estimated_ground_motion(monkeypatch):
+def test_curved_nearest_approach_uses_estimated_turn_rate(monkeypatch):
     aircraft = Aircraft(
         callsign="TEST456",
         timestamp=1000,
-        longitude=1.0,
+        longitude=0.01,
         latitude=0.0,
         altitude=10000,
         heading=270.0,
@@ -489,11 +489,6 @@ def test_curved_nearest_approach_uses_estimated_ground_motion(monkeypatch):
         user_latitude=0.0,
     )
 
-    monkeypatch.setattr(
-        aircraft,
-        "get_estimated_ground_motion",
-        lambda: (120.0, 270.0),
-    )
     monkeypatch.setattr(
         aircraft,
         "get_estimated_turn_rate",
@@ -506,8 +501,10 @@ def test_curved_nearest_approach_uses_estimated_ground_motion(monkeypatch):
 
     distance, time = result
 
+    # About 0.7 miles east, flying west at 2 miles per minute: the
+    # closest point falls inside the 60 s window.
     assert distance < aircraft.distance_from_user
-    assert 0 <= time <= 60
+    assert 0 < time < 60
 
 
 def test_get_curved_trajectory_returns_none_without_sufficient_history():
@@ -541,11 +538,6 @@ def test_get_curved_trajectory_returns_gps_coordinates(monkeypatch):
         user_latitude=0.0,
     )
 
-    monkeypatch.setattr(
-        aircraft,
-        "get_estimated_ground_motion",
-        lambda: (120.0, 270.0),
-    )
     monkeypatch.setattr(
         aircraft,
         "get_estimated_turn_rate",
@@ -589,9 +581,8 @@ def test_evaluate_prediction_snapshot_measures_straight_line_error():
         "timestamp": 1000,
         "longitude": 0.0,
         "latitude": 0.0,
-        "straight_speed": 360.0,
-        "straight_heading": 90.0,
-        "ground_motion": None,
+        "speed": 360.0,
+        "heading": 90.0,
         "turn_rate": None,
     }
 
@@ -632,9 +623,8 @@ def test_evaluate_prediction_snapshot_measures_curved_error():
         "timestamp": 1000,
         "longitude": 0.0,
         "latitude": 0.0,
-        "straight_speed": 360.0,
-        "straight_heading": 90.0,
-        "ground_motion": (360.0, 90.0),
+        "speed": 360.0,
+        "heading": 90.0,
         "turn_rate": 1.0,
     }
 
@@ -732,3 +722,136 @@ def test_update_info_ignores_duplicate_timestamp_for_evaluation():
 
     assert len(aircraft.prediction_errors) == 1
 
+
+
+def test_straight_trajectory_projects_reported_heading_and_speed():
+    aircraft = Aircraft(
+        callsign="TEST_STRAIGHT",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=0.0,
+        country_of_origin="Test",
+        velocity=60.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    trajectory = aircraft.get_straight_trajectory(prediction_seconds=60)
+    start, end = trajectory[0], trajectory[-1]
+
+    assert len(trajectory) == 13  # one point every 5 s, 0..60 s
+
+    assert start == [0.0, 0.0]
+    # 60 mph for 60 s is one mile north.
+    assert Calculator.calculate_haversine_distance(
+        0.0, 0.0, end[1], end[0]
+    ) == pytest.approx(1.0, abs=0.001)
+    assert end[1] == pytest.approx(0.0)
+
+
+def test_ground_motion_uses_more_than_two_history_points(monkeypatch):
+    aircraft = Aircraft(
+        callsign="TEST_WINDOW",
+        timestamp=1000,
+        longitude=0.0,
+        latitude=0.0,
+        altitude=10000,
+        heading=90.0,
+        country_of_origin="Test",
+        velocity=100.0,
+        user_longitude=0.0,
+        user_latitude=0.0,
+    )
+
+    for step in range(1, 8):
+        aircraft.update_info(
+            new_longitude=0.01 * step,
+            new_latitude=0.0,
+            new_timestamp=1000 + 15 * step,
+            new_altitude=10000,
+            new_heading=90.0,
+            new_velocity=100.0,
+        )
+
+    received = []
+
+    def fake_estimate(observations):
+        received.append(observations)
+        return None
+
+    monkeypatch.setattr(Calculator, "estimate_ground_motion", fake_estimate)
+
+    aircraft.get_estimated_ground_motion()
+
+    assert len(received[0]) == 6
+
+
+def make_turning_aircraft():
+    """
+    Aircraft flying a clockwise circle at 3 deg/s and 300 mph, observed
+    every 15 s like the live tracker. The reported heading at each fix
+    is the true current track.
+    """
+    speed, turn_rate, step = 300.0, 3.0, 15
+    start_track = 0.0
+
+    def state(t):
+        east, north = Calculator.predict_ctrv_position(
+            speed, start_track, turn_rate, t
+        )
+        longitude, latitude = Calculator.local_coordinates_to_gps(
+            east, north, 23.0, 40.0
+        )
+        heading = (start_track + turn_rate * t) % 360
+        return longitude, latitude, heading
+
+    longitude, latitude, heading = state(0)
+    aircraft = Aircraft(
+        "TURNING", 1000, longitude, latitude, 10000, heading,
+        "Test", speed, 23.0, 40.6,
+    )
+
+    for t in range(step, 6 * step, step):
+        longitude, latitude, heading = state(t)
+        aircraft.update_info(
+            longitude, latitude, 1000 + t, 10000, heading, speed
+        )
+
+    return aircraft
+
+
+def test_curved_trajectory_leaves_along_reported_heading():
+    aircraft = make_turning_aircraft()
+
+    trajectory = aircraft.get_curved_trajectory(sample_interval_seconds=1)
+    (lat0, lon0), (lat1, lon1) = trajectory[0], trajectory[1]
+    initial_track = Calculator.bearing_angle_from_user_to_plane(
+        lon1, lat1, lon0, lat0
+    )
+
+    # Over the first second the track turns 3 degrees, so the first
+    # segment's bearing is about heading + 1.5. Before the fix it was
+    # tens of degrees behind.
+    assert abs(
+        Calculator.angular_difference(initial_track, aircraft.heading)
+    ) < 3
+
+
+def test_curved_trajectory_follows_the_turn():
+    aircraft = make_turning_aircraft()
+
+    turn_rate = aircraft.get_estimated_turn_rate()
+    trajectory = aircraft.get_curved_trajectory()
+
+    assert turn_rate == pytest.approx(3.0, abs=0.1)
+
+    # 60 s at 3 deg/s: the final segment points about 180 deg later.
+    (lat_a, lon_a), (lat_b, lon_b) = trajectory[-2], trajectory[-1]
+    final_track = Calculator.bearing_angle_from_user_to_plane(
+        lon_b, lat_b, lon_a, lat_a
+    )
+    expected = (aircraft.heading + 3.0 * 57.5) % 360
+
+    assert abs(Calculator.angular_difference(final_track, expected)) < 5

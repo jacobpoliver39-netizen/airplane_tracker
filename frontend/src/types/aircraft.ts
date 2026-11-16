@@ -1,10 +1,12 @@
+export type LatLng = [number, number];
 
+// Mirrors the dicts returned by GET /aircraft in api.py.
 export interface Aircraft {
   id: string;
   callsign: string;
   latitude: number;
   longitude: number;
-  altitude: number;
+  altitude: number | null;
   speed: number;
   heading: number;
   distance: number;
@@ -12,5 +14,10 @@ export interface Aircraft {
   nearest_distance_time: number | null;
   curved_nearest_distance: number | null;
   curved_nearest_distance_time: number | null;
-  curved_trajectory: [number, number][] | null;
+  // Unix seconds of the reported position. Trajectory points start at
+  // that position and are trajectory_step_seconds apart.
+  timestamp: number;
+  trajectory_step_seconds: number;
+  straight_trajectory: LatLng[] | null;
+  curved_trajectory: LatLng[] | null;
 }

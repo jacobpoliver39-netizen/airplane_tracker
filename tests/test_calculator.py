@@ -364,10 +364,9 @@ def test_nearest_approach_ctrv_straight_toward_reference():
         sample_interval_seconds=2,
     )
 
-    distance, time = result
-
-    assert distance == pytest.approx(9.0, abs=0.01)
-    assert time == 60
+    # Still closing at the end of the window: the real closest point
+    # is later, so no estimate is given.
+    assert result is None
 
 
 def test_nearest_approach_ctrv_straight_past_reference():
@@ -381,10 +380,8 @@ def test_nearest_approach_ctrv_straight_past_reference():
         sample_interval_seconds=2,
     )
 
-    distance, time = result
-
-    assert distance == pytest.approx(0.5, abs=0.01)
-    assert time == 0
+    # Moving away: the closest point is now, not in the future.
+    assert result is None
 
 def test_nearest_approach_ctrv_turning_flight():
     result = Calculator.nearest_approach_ctrv(
@@ -420,3 +417,29 @@ def test_ground_motion_uses_multiple_observations():
     # The earlier observations establish the underlying eastbound motion.
     assert direction == pytest.approx(90.0, abs=0.5)
     assert speed == pytest.approx(164.0, abs=50.0)
+
+
+def test_nearest_approach_ctrv_closest_point_inside_window():
+    result = Calculator.nearest_approach_ctrv(
+        aircraft_east=0.0,
+        aircraft_north=1.0,
+        speed_mph=120.0,
+        ground_track_degrees=180.0,
+        turn_rate_degrees_per_second=0.0,
+        prediction_seconds=60,
+        sample_interval_seconds=2,
+    )
+
+    distance, time = result
+
+    # 1 mile north at 2 miles per minute: passes overhead at 30 s.
+    assert distance == pytest.approx(0.0, abs=0.01)
+    assert time == 30
+
+
+def test_haversine_distance_is_not_rounded():
+    distance = Calculator.calculate_haversine_distance(
+        23.0, 40.6, 23.0001, 40.6
+    )
+
+    assert 0 < distance < 0.01

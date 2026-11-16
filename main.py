@@ -1,192 +1,263 @@
-
 import logging
 import time
+from dataclasses import dataclass
+
 import requests
-import calculator
+
+import config
 from aircraft import Aircraft
-from tracker_state import aircraft_tracker
-from commands import RemoveMissingAircraftCommand, RemoveLowAltitudeAircraftCommand
+from commands import RemoveLowAltitudeAircraftCommand, RemoveMissingAircraftCommand
 from logging_service import LoggingService
+from opensky_client import OpenSkyClient, OpenSkyRateLimitError
+from tracker_state import aircraft_tracker
 
 logger = logging.getLogger(__name__)
 
-def main(stop_event=None):
-    LoggingService.initialize()
+METERS_TO_FEET = 3.28084
+METERS_PER_SECOND_TO_MPH = 2.236936
 
-    api = "https://opensky-network.org/api/states/all"
-    params1 = {#Botsari
-            "lamin": 39.6,
-            "lamax": 41.6,
-            "lomin": 21.9,
-            "lomax": 23.9
-        }
 
-    params2 = {#ACT
-                "lamin": 39.6,
-                "lamax": 41.6,
-                "lomin": 22.0,
-                "lomax": 24.0
-            }
+@dataclass(frozen=True)
+class Observation:
+    """One aircraft state from OpenSky, converted to tracker units."""
 
-    my_longitude = 23.0 #ACT Campus
-    my_latitude = 40.6 #ACT Campus
-    
-    #my_longitude = 22.9 #Botsari
-    #my_latitude = 40.6 #Botsari
-    oAircraftTracker = aircraft_tracker #Class to handle all current aircrafts
+    callsign: str
+    timestamp: float
+    longitude: float
+    latitude: float
+    altitude: float | None  # feet, None when OpenSky has no altitude
+    on_ground: bool
+    velocity: float  # mph
+    heading: float  # degrees
+    country_of_origin: str | None
 
-    while stop_event is None or not stop_event.is_set():
 
-        
-        try:
-            response = requests.get(api, params=params2, timeout=20)
-            response.raise_for_status()
-            data = response.json()
+def _is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
-            # Validate the response before changing the tracker.
-            if not isinstance(data, dict) or "states" not in data:
-                raise ValueError("Unexpected OpenSky response structure")
 
-            states = data["states"]
+def parse_state(state):
+    """
+    Convert one OpenSky state array to an Observation.
 
-            if states is not None:
-                if not isinstance(states, list):
-                    raise ValueError("OpenSky states must be a list or null")
+    Returns None for states without a callsign or without the fields
+    the predictions need (position, position time, velocity, heading).
+    Index layout: 1 callsign, 2 country, 3 time_position, 5 lon, 6 lat,
+    7 baro altitude (m), 8 on_ground, 9 velocity (m/s), 10 true track.
+    """
+    if not isinstance(state, (list, tuple)) or len(state) < 11:
+        return None
 
-                if any(
-                    not isinstance(aircraft_data, (list, tuple))
-                    or len(aircraft_data) < 12
-                    for aircraft_data in states
-                ):
-                    raise ValueError("Malformed aircraft state in response")
+    callsign = state[1]
 
-        except (requests.RequestException, ValueError) as error:
-            logger.warning("OpenSky request failed or returned invalid data: %s", error)
+    if not isinstance(callsign, str) or not callsign.strip():
+        return None
 
-            if stop_event is None:
-                time.sleep(15)
-            else:
-                stop_event.wait(15)
+    timestamp = state[3]
+    longitude = state[5]
+    latitude = state[6]
+    velocity = state[9]
+    heading = state[10]
 
+    if not all(
+        _is_number(value)
+        for value in (timestamp, longitude, latitude, velocity, heading)
+    ):
+        return None
+
+    altitude = state[7]
+    altitude = (
+        round(altitude * METERS_TO_FEET, 1) if _is_number(altitude) else None
+    )
+
+    return Observation(
+        callsign=callsign.strip(),
+        timestamp=timestamp,
+        longitude=longitude,
+        latitude=latitude,
+        altitude=altitude,
+        on_ground=bool(state[8]),
+        velocity=round(velocity * METERS_PER_SECOND_TO_MPH, 2),
+        heading=heading,
+        country_of_origin=state[2],
+    )
+
+
+def is_trackable(observation, minimum_altitude=config.MINIMUM_ALTITUDE_FEET):
+    """Return False for aircraft on the ground or below the minimum altitude."""
+    if observation.on_ground:
+        return False
+
+    return observation.altitude is None or observation.altitude >= minimum_altitude
+
+
+def apply_states(tracker, states, response_time):
+    """
+    Update the tracker from one validated OpenSky response.
+
+    Returns the number of aircraft observed in the response.
+    """
+    observations = []
+    skipped = 0
+
+    for state in states or []:
+        observation = parse_state(state)
+
+        if observation is None:
+            skipped += 1
             continue
 
+        observations.append(observation)
 
-        observed_callsigns = set()
+    if skipped:
+        logger.debug("Skipped %d incomplete OpenSky states", skipped)
 
-        if states is not None:
+    observed_callsigns = {observation.callsign for observation in observations}
 
-            for aircraft_data in states:
-                callsign = aircraft_data[1]
+    with tracker.lock:
+        for observation in observations:
+            existing = tracker.aircrafts.get(observation.callsign)
 
-                # Ignore empty callsigns for tracking purposes.
-                if not callsign or not callsign.strip():
-                    continue
-
-                callsign = callsign.strip()
-                observed_callsigns.add(callsign)
-
-                longitude = aircraft_data[5]
-                latitude = aircraft_data[6]
-
-                if aircraft_data[7]:
-                    altitude = round(aircraft_data[7] * 3.28084, 1)
-                else:
-                    altitude = 1
-
-                on_ground = aircraft_data[8]
-                velocity = aircraft_data[9]
-                heading = aircraft_data[10]
-                vertical_rate = aircraft_data[11]
-                country_of_origin = aircraft_data[2]
-                last_updated = aircraft_data[3]
-
-                velocity = round(velocity * 2.236936, 2)
-                if velocity == 0:
-                    velocity = 1
-
-                if callsign not in oAircraftTracker.aircrafts:
-                    oAircraft = Aircraft(
-                        callsign,
-                        last_updated,
-                        longitude,
-                        latitude,
-                        altitude,
-                        heading,
-                        country_of_origin,
-                        velocity,
-                        my_longitude,
-                        my_latitude,
+            if existing is not None:
+                # Update even when the aircraft is now low or on the
+                # ground, so the low-altitude command removes it once.
+                existing.update_info(
+                    observation.longitude,
+                    observation.latitude,
+                    observation.timestamp,
+                    observation.altitude,
+                    observation.heading,
+                    observation.velocity,
+                    new_on_ground=observation.on_ground,
+                )
+            elif is_trackable(observation):
+                tracker.add_aircraft(
+                    Aircraft(
+                        observation.callsign,
+                        observation.timestamp,
+                        observation.longitude,
+                        observation.latitude,
+                        observation.altitude,
+                        observation.heading,
+                        observation.country_of_origin,
+                        observation.velocity,
+                        config.USER_LONGITUDE,
+                        config.USER_LATITUDE,
+                        on_ground=observation.on_ground,
                     )
-                    oAircraftTracker.add_aircraft(oAircraft)
-                else:
-                    oAircraft = oAircraftTracker.aircrafts[callsign]
-                    oAircraft.update_info(
-                        longitude,
-                        latitude,
-                        last_updated,
-                        altitude,
-                        heading,
-                        velocity,
-                    )
+                )
 
-            command = RemoveMissingAircraftCommand(
-                oAircraftTracker, observed_callsigns
-            )
-            command.execute()
-            command = RemoveLowAltitudeAircraftCommand(oAircraftTracker)
-            command.execute()
+        RemoveMissingAircraftCommand(
+            tracker,
+            observed_callsigns,
+            current_time=response_time,
+            grace_seconds=config.MISSING_AIRCRAFT_GRACE_SECONDS,
+        ).execute()
 
-        else:
-            logger.info("OpenSky returned no aircraft states")
-            command = RemoveMissingAircraftCommand(
-                oAircraftTracker, set()
-            )
-            command.execute()
+        RemoveLowAltitudeAircraftCommand(
+            tracker, config.MINIMUM_ALTITUDE_FEET
+        ).execute()
+
+    return len(observed_callsigns)
 
 
-        logger.info(
-            "Polling cycle completed: %d aircraft observed, %d currently tracked",
-            len(observed_callsigns),
-            len(oAircraftTracker.aircrafts),
+def poll_once(client, tracker):
+    """
+    Fetch one OpenSky response and apply it to the tracker.
+
+    A failed or malformed request raises before the tracker is touched.
+    """
+    response_time, states = client.get_states()
+
+    if states is None:
+        logger.info("OpenSky returned no aircraft states")
+
+    observed = apply_states(tracker, states, response_time)
+
+    logger.info(
+        "Polling cycle completed: %d aircraft observed, %d currently tracked",
+        observed,
+        len(tracker.aircrafts),
+    )
+
+
+def _wait(stop_event, seconds):
+    if stop_event is None:
+        time.sleep(seconds)
+    else:
+        stop_event.wait(seconds)
+
+
+def main(stop_event=None, client=None, tracker=aircraft_tracker):
+    LoggingService.initialize()
+
+    owns_client = client is None
+    client = client if client is not None else _create_client()
+
+    try:
+        _poll_until_stopped(client, tracker, stop_event)
+    finally:
+        if owns_client:
+            client.close()
+
+
+def _create_client():
+    if config.REPLAY_FILE:
+        # Imported here so live runs don't load the replay code.
+        from replay_client import ReplayOpenSkyClient
+
+        return ReplayOpenSkyClient(
+            config.REPLAY_FILE,
+            speed=config.REPLAY_SPEED,
+            start_offset_seconds=config.REPLAY_START_SECONDS,
+            loop=config.REPLAY_LOOP,
         )
-        if stop_event is None:
-            time.sleep(15)
-        else:
-            stop_event.wait(15)
+
+    return OpenSkyClient()
+
+
+def _poll_until_stopped(client, tracker, stop_event):
+    logger.info(
+        "Polling OpenSky every %d s (%s access)",
+        config.POLL_INTERVAL_SECONDS,
+        "authenticated" if client.authenticated else "anonymous",
+    )
+
+    while stop_event is None or not stop_event.is_set():
+        retry_after = None
+
+        try:
+            poll_once(client, tracker)
+        except OpenSkyRateLimitError as error:
+            retry_after = error.retry_after_seconds
+            logger.warning("%s", error)
+        except (requests.RequestException, ValueError) as error:
+            logger.warning("OpenSky request failed or returned invalid data: %s", error)
+        except Exception:
+            # Never let an unexpected error end the polling thread.
+            logger.exception("Unexpected error during polling cycle")
+
+        _wait(stop_event, _next_wait_seconds(client, retry_after))
+
+
+def _next_wait_seconds(client, retry_after=None):
+    """
+    Ask the client how long to wait (fixed for OpenSky, the recorded gap
+    for a replay). Asked after the poll, because a replay times the wait
+    from the frame it just served.
+    """
+    try:
+        wait_seconds = client.seconds_until_next_poll()
+    except Exception:
+        logger.exception("Could not get the next poll time")
+        wait_seconds = config.POLL_INTERVAL_SECONDS
+
+    if retry_after is not None:
+        wait_seconds = max(wait_seconds, retry_after)
+        logger.warning("Next attempt in %d s", wait_seconds)
+
+    return wait_seconds
+
 
 if __name__ == "__main__":
     main()
-
-
-'''
-                    
-
-                for callsign in aircrafts[0]:
-                    if callsign not in current_callsigns and (data["time"] - last_updated) > 40:
-                        try:
-                            aircrafts.remove(data[callsign])
-                            distance_history.remove(data[callsign])
-                        except:
-                            pass
-
-
-                aircrafts.sort(key=lambda aircraft_info: aircraft_info[1])
-                #callsigns = []
-                for data in aircrafts:
-                    #callsigns.append(aircraft[0])
-                    print(data[0],"\n",data[1]," miles ", data[2], "\n",data[3], ", \nAlitude: ", data[5], "\nNearest approach: ",data[7], "miles in ",data[8]," seconds")
-                    if data[4] == None:
-                        print("No approach data\n")
-                    elif data[4] > 0:
-                        print("Closing at ", data[4], "miles per hour\n")
-                    elif data[4] < 0:
-                        print("Moving away at ", -data[4], "miles per hour\n")
-                    elif data[4] == 0:
-                        print("distance unchanged\n")
-
-
-
-
-                print(distance_history)
-'''
-                

@@ -1,20 +1,25 @@
 # Class to track aircraft in relation to a given position.
 
 import logging
-
-import logging
+import threading
 
 from ranking_strategies import NearestStrategy, RankingStrategy
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 
 class AircraftTracker:
+    """
+    Registry of tracked aircraft, shared by the polling thread and the API.
+
+    Hold `lock` while reading or changing the tracked aircraft (including
+    the Aircraft objects themselves) from more than one step. It is
+    re-entrant, so the methods below can be called while holding it.
+    """
 
     def __init__(self, ranking_strategy=None):
         self.aircrafts = {}
+        self.lock = threading.RLock()
         self.set_ranking_strategy(
             ranking_strategy if ranking_strategy is not None
             else NearestStrategy()
@@ -28,26 +33,19 @@ class AircraftTracker:
 
     def add_aircraft(self, aircraft):
         callsign = aircraft.callsign
-        self.aircrafts[callsign] = aircraft
+
+        with self.lock:
+            self.aircrafts[callsign] = aircraft
+
         logger.info("Aircraft added to tracker: %s", callsign)
 
     def remove_aircraft(self, callsign):
-        del self.aircrafts[callsign]
+        with self.lock:
+            del self.aircrafts[callsign]
+
         logger.info("Aircraft removed from tracker: %s", callsign)
-
-    def display_all_callsigns(self):
-        for callsign in self.aircrafts:
-            print(callsign)
-
-    def display_aircraft_info_nearest_to_farthest(self):
-        sorted_dict = self.sort_aircrafts_by_distance()
-        for aircraft in sorted_dict.values():
-            print(aircraft.get_info())
 
     def get_sorted_aircrafts(self):
         """Return aircraft ranked using the currently selected strategy."""
-        return self._ranking_strategy.sort_aircrafts(self.aircrafts)
-
-    def sort_aircrafts_by_distance(self):
-        """Return aircraft sorted from nearest to farthest."""
-        return NearestStrategy().sort_aircrafts(self.aircrafts)
+        with self.lock:
+            return self._ranking_strategy.sort_aircrafts(dict(self.aircrafts))

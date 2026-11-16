@@ -15,8 +15,9 @@ class Calculator:
         lat2 = math.radians(lat2)
         hav_angle = Calculator.haversine(lat2 - lat1) + math.cos(lat1) * math.cos(lat2) * Calculator.haversine(lon2 - lon1)
         angle = math.asin(math.sqrt(hav_angle)) * 2
-        distance_between = round(angle * 3959,2)
-        return distance_between
+        # Not rounded: callers that need precision (turn rate, approach
+        # speed, prediction error) use it. Round only for display.
+        return angle * 3959
 
     @staticmethod
     def gps_to_local_coordinates(
@@ -333,7 +334,10 @@ class Calculator:
         Predict the closest distance to the reference point using CTRV.
 
         Aircraft position is expressed in local east/north miles.
-        Returns (minimum_distance_miles, time_seconds).
+        Returns (minimum_distance_miles, time_seconds), or None when the
+        closest point is not inside the prediction window: either it is
+        now (the aircraft is moving away) or at the end of the window
+        (it is still closing, so the true closest point is later).
         """
         if (
             speed_mph is None
@@ -376,6 +380,12 @@ class Calculator:
             if distance < closest_distance:
                 closest_distance = distance
                 closest_time = elapsed_seconds
+
+        if closest_time is None:
+            return None
+
+        if closest_time == sample_times[0] or closest_time == sample_times[-1]:
+            return None
 
         return closest_distance, closest_time
 

@@ -7,18 +7,9 @@ from pathlib import Path
 
 import requests
 
+import config
+from opensky_client import OpenSkyClient, OpenSkyRateLimitError
 
-API_URL = "https://opensky-network.org/api/states/all"
-
-PARAMS = {
-    "lamin": 39.6,
-    "lamax": 41.6,
-    "lomin": 22.0,
-    "lomax": 24.0,
-}
-
-POLL_INTERVAL_SECONDS = 15
-REQUEST_TIMEOUT_SECONDS = 20
 
 OUTPUT_FILE = (
     Path(__file__).resolve().parent
@@ -59,10 +50,16 @@ def collect():
 
     file_exists = OUTPUT_FILE.exists() and OUTPUT_FILE.stat().st_size > 0
 
-    logging.info("Saving observations to %s", OUTPUT_FILE)
-    logging.info("Polling interval: %s seconds", POLL_INTERVAL_SECONDS)
+    client = OpenSkyClient()
 
-    with requests.Session() as session:
+    logging.info("Saving observations to %s", OUTPUT_FILE)
+    logging.info(
+        "Polling interval: %s seconds (%s access)",
+        config.POLL_INTERVAL_SECONDS,
+        "authenticated" if client.authenticated else "anonymous",
+    )
+
+    try:
         with OUTPUT_FILE.open("a", newline="", encoding="utf-8") as csv_file:
             writer = csv.DictWriter(
                 csv_file,
@@ -75,68 +72,52 @@ def collect():
 
             while True:
                 cycle_start = time.monotonic()
+                wait_override = None
 
                 try:
-                    response = session.get(
-                        API_URL,
-                        params=PARAMS,
-                        timeout=REQUEST_TIMEOUT_SECONDS,
-                    )
-                    response.raise_for_status()
-
-                    data = response.json()
-
-                    if not isinstance(data, dict) or "states" not in data:
-                        raise ValueError("Unexpected OpenSky response")
-
-                    states = data["states"]
-
-                    if states is not None and not isinstance(states, list):
-                        raise ValueError("OpenSky states must be a list or null")
-
+                    response_time, states = client.get_states()
                     collected_at = datetime.now(timezone.utc).isoformat()
-                    response_time = data.get("time")
-
                     rows_written = 0
 
-                    if states is not None:
-                        for state in states:
-                            if not isinstance(state, (list, tuple)):
-                                continue
+                    for state in states or []:
+                        if not isinstance(state, (list, tuple)):
+                            continue
 
-                            longitude = get_field(state, 5)
-                            latitude = get_field(state, 6)
+                        longitude = get_field(state, 5)
+                        latitude = get_field(state, 6)
 
-                            if longitude is None or latitude is None:
-                                continue
+                        if longitude is None or latitude is None:
+                            continue
 
-                            writer.writerow({
-                                "collected_at": collected_at,
-                                "response_time": response_time,
-                                "icao24": get_field(state, 0),
-                                "callsign": (
-                                    get_field(state, 1).strip()
-                                    if get_field(state, 1)
-                                    else None
-                                ),
-                                "origin_country": get_field(state, 2),
-                                "time_position": get_field(state, 3),
-                                "last_contact": get_field(state, 4),
-                                "longitude": longitude,
-                                "latitude": latitude,
-                                "baro_altitude_m": get_field(state, 7),
-                                "on_ground": get_field(state, 8),
-                                "velocity_mps": get_field(state, 9),
-                                "true_track_deg": get_field(state, 10),
-                                "vertical_rate_mps": get_field(state, 11),
-                                "geo_altitude_m": get_field(state, 13),
-                                "squawk": get_field(state, 14),
-                                "spi": get_field(state, 15),
-                                "position_source": get_field(state, 16),
-                                "category": get_field(state, 17),
-                            })
+                        callsign = get_field(state, 1)
 
-                            rows_written += 1
+                        writer.writerow({
+                            "collected_at": collected_at,
+                            "response_time": response_time,
+                            "icao24": get_field(state, 0),
+                            "callsign": (
+                                callsign.strip()
+                                if isinstance(callsign, str) and callsign
+                                else None
+                            ),
+                            "origin_country": get_field(state, 2),
+                            "time_position": get_field(state, 3),
+                            "last_contact": get_field(state, 4),
+                            "longitude": longitude,
+                            "latitude": latitude,
+                            "baro_altitude_m": get_field(state, 7),
+                            "on_ground": get_field(state, 8),
+                            "velocity_mps": get_field(state, 9),
+                            "true_track_deg": get_field(state, 10),
+                            "vertical_rate_mps": get_field(state, 11),
+                            "geo_altitude_m": get_field(state, 13),
+                            "squawk": get_field(state, 14),
+                            "spi": get_field(state, 15),
+                            "position_source": get_field(state, 16),
+                            "category": get_field(state, 17),
+                        })
+
+                        rows_written += 1
 
                     csv_file.flush()
 
@@ -145,12 +126,22 @@ def collect():
                         rows_written,
                     )
 
+                except OpenSkyRateLimitError as error:
+                    logging.warning("%s", error)
+                    wait_override = error.retry_after_seconds
+
                 except (requests.RequestException, ValueError) as error:
                     logging.warning("OpenSky collection failed: %s", error)
 
                 elapsed = time.monotonic() - cycle_start
-                wait_time = max(0, POLL_INTERVAL_SECONDS - elapsed)
+                wait_time = max(0, config.POLL_INTERVAL_SECONDS - elapsed)
+
+                if wait_override is not None:
+                    wait_time = max(wait_time, wait_override)
+
                 time.sleep(wait_time)
+    finally:
+        client.close()
 
 
 if __name__ == "__main__":

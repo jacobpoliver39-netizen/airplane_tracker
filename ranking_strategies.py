@@ -28,10 +28,7 @@ class FastestApproachStrategy(RankingStrategy):
             speed = aircraft.get_approach_speed_towards_user()
 
             # Aircraft without sufficient history rank last.
-            if not isinstance(speed, (int, float)):
-                return float("-inf")
-
-            return speed
+            return float("-inf") if speed is None else speed
 
         return dict(sorted(
             aircrafts.items(),
