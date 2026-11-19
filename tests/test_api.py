@@ -213,3 +213,102 @@ def test_aircraft_endpoint_is_safe_while_tracker_is_updated(monkeypatch):
         writer.join(timeout=5)
 
     assert errors == []
+
+
+# --- data source endpoints ----------------------------------------------
+
+from polling_service import RecordingNotFoundError, SourceBusyError
+
+
+class FakePollingService:
+    def __init__(self, error=None):
+        self.calls = []
+        self.error = error
+
+    def _record(self, *call):
+        self.calls.append(call)
+        if self.error is not None:
+            raise self.error
+        return {"mode": "replay" if call[0] != "live" else "live"}
+
+    def status(self):
+        return {"mode": "live", "clock": {"now": 1.0, "speed": 1.0}}
+
+    def list_recordings(self):
+        return [{"name": "session.jsonl", "kind": "recording"}]
+
+    def start_replay(self, name, speed=1.0, loop=False):
+        return self._record("replay", name, speed, loop)
+
+    def set_speed(self, speed):
+        return self._record("speed", speed)
+
+    def go_live(self):
+        return self._record("live")
+
+
+@pytest.fixture
+def fake_service(monkeypatch):
+    service = FakePollingService()
+    monkeypatch.setattr(api, "polling_service", service)
+    return service
+
+
+def test_source_and_recordings_endpoints(fake_service):
+    client = TestClient(api.app)
+
+    assert client.get("/source").json()["mode"] == "live"
+    assert client.get("/recordings").json()[0]["name"] == "session.jsonl"
+
+
+def test_start_replay_endpoint(fake_service):
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/source/replay", json={"recording": "session.jsonl", "speed": 10}
+    )
+
+    assert response.status_code == 200
+    assert fake_service.calls == [("replay", "session.jsonl", 10.0, False)]
+
+
+def test_start_replay_defaults_to_normal_speed(fake_service):
+    TestClient(api.app).post("/source/replay", json={"recording": "a.jsonl"})
+
+    assert fake_service.calls == [("replay", "a.jsonl", 1.0, False)]
+
+
+def test_speed_and_live_endpoints(fake_service):
+    client = TestClient(api.app)
+
+    assert client.post("/source/replay/speed", json={"speed": 30}).status_code == 200
+    assert client.post("/source/live").status_code == 200
+    assert fake_service.calls == [("speed", 30.0), ("live",)]
+
+
+@pytest.mark.parametrize("speed", [0, -5, 10_000])
+def test_speed_outside_limits_is_rejected(fake_service, speed):
+    response = TestClient(api.app).post(
+        "/source/replay/speed", json={"speed": speed}
+    )
+
+    assert response.status_code == 422
+    assert fake_service.calls == []
+
+
+@pytest.mark.parametrize(
+    "error, status",
+    [
+        (RecordingNotFoundError("nope"), 404),
+        (SourceBusyError("busy"), 503),
+        (ValueError("bad"), 400),
+    ],
+)
+def test_source_errors_map_to_status_codes(monkeypatch, error, status):
+    monkeypatch.setattr(api, "polling_service", FakePollingService(error))
+
+    response = TestClient(api.app).post(
+        "/source/replay", json={"recording": "x.jsonl"}
+    )
+
+    assert response.status_code == status

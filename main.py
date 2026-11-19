@@ -5,7 +5,13 @@ import requests
 
 import config
 from aircraft_factory import AircraftFactory
-from commands import RemoveLowAltitudeAircraftCommand, RemoveMissingAircraftCommand
+from command_queue import TrackerWorker
+from commands import (
+    CommandBatch,
+    RemoveLowAltitudeAircraftCommand,
+    RemoveMissingAircraftCommand,
+    UpdateAircraftCommand,
+)
 from logging_service import LoggingService
 from opensky_adapter import OpenSkyAdapter
 from opensky_client import OpenSkyClient, OpenSkyRateLimitError
@@ -19,19 +25,13 @@ default_adapter = OpenSkyAdapter()
 default_factory = AircraftFactory(config.USER_LONGITUDE, config.USER_LATITUDE)
 
 
-def is_trackable(observation, minimum_altitude=config.MINIMUM_ALTITUDE_FEET):
-    """Return False for aircraft on the ground or below the minimum altitude."""
-    if observation.on_ground:
-        return False
-
-    return observation.altitude is None or observation.altitude >= minimum_altitude
-
-
-def apply_states(tracker, states, response_time, adapter=None, factory=None):
+def build_poll_commands(states, response_time, adapter=None, factory=None):
     """
-    Update the tracker from one validated OpenSky response.
+    Turn one validated OpenSky response into the commands that apply it.
 
-    Returns the number of aircraft observed in the response.
+    Returns (batch, observed_count). The batch holds one
+    UpdateAircraftCommand per valid state, then the missing-aircraft and
+    low-altitude removals. Nothing touches the tracker here.
     """
     adapter = adapter if adapter is not None else default_adapter
     factory = factory if factory is not None else default_factory
@@ -39,56 +39,61 @@ def apply_states(tracker, states, response_time, adapter=None, factory=None):
     observations = adapter.to_observations(states)
     observed_callsigns = {observation.callsign for observation in observations}
 
-    with tracker.lock:
-        for observation in observations:
-            existing = tracker.aircrafts.get(observation.callsign)
-
-            if existing is not None:
-                # Update even when the aircraft is now low or on the
-                # ground, so the low-altitude command removes it once.
-                existing.update_info(
-                    observation.longitude,
-                    observation.latitude,
-                    observation.timestamp,
-                    observation.altitude,
-                    observation.heading,
-                    observation.velocity,
-                    new_on_ground=observation.on_ground,
-                )
-            elif is_trackable(observation):
-                tracker.add_aircraft(factory.create(observation))
-
+    commands = [
+        UpdateAircraftCommand(
+            observation, factory, config.MINIMUM_ALTITUDE_FEET
+        )
+        for observation in observations
+    ]
+    commands.append(
         RemoveMissingAircraftCommand(
-            tracker,
             observed_callsigns,
             current_time=response_time,
             grace_seconds=config.MISSING_AIRCRAFT_GRACE_SECONDS,
-        ).execute()
+        )
+    )
+    commands.append(
+        RemoveLowAltitudeAircraftCommand(config.MINIMUM_ALTITUDE_FEET)
+    )
 
-        RemoveLowAltitudeAircraftCommand(
-            tracker, config.MINIMUM_ALTITUDE_FEET
-        ).execute()
+    batch = CommandBatch(commands, label=f"poll at {response_time}")
 
-    return len(observed_callsigns)
+    return batch, len(observed_callsigns)
 
 
-def poll_once(client, tracker):
+def apply_states(tracker, states, response_time, adapter=None, factory=None):
     """
-    Fetch one OpenSky response and apply it to the tracker.
+    Build the commands for one response and execute them right away.
 
-    A failed or malformed request raises before the tracker is touched.
+    Returns the number of aircraft observed in the response.
+    """
+    batch, observed = build_poll_commands(
+        states, response_time, adapter=adapter, factory=factory
+    )
+    batch.execute(tracker)
+
+    return observed
+
+
+def poll_once(client, executor):
+    """
+    Producer step: fetch one OpenSky response and submit the commands
+    that apply it.
+
+    A failed or malformed request raises before any command is created.
     """
     response_time, states = client.get_states()
 
     if states is None:
         logger.info("OpenSky returned no aircraft states")
 
-    observed = apply_states(tracker, states, response_time)
+    batch, observed = build_poll_commands(states, response_time)
+    executor.submit(batch)
 
     logger.info(
-        "Polling cycle completed: %d aircraft observed, %d currently tracked",
+        "Polling cycle completed: %d aircraft observed, %d commands submitted",
         observed,
-        len(tracker.aircrafts),
+        len(batch),
     )
 
 
@@ -99,15 +104,29 @@ def _wait(stop_event, seconds):
         stop_event.wait(seconds)
 
 
-def main(stop_event=None, client=None, tracker=aircraft_tracker):
+def main(stop_event=None, client=None, tracker=aircraft_tracker, wait_first=False):
+    """
+    Poll `client` (OpenSky, or a replay from JACOBSKY_REPLAY) until
+    stop_event is set. A client passed in is not closed here.
+
+    wait_first: wait until the client's next poll is due before the
+    first poll, used when resuming a replay that was already running.
+    """
     LoggingService.initialize()
 
     owns_client = client is None
     client = client if client is not None else _create_client()
 
+    # Consumer: the only thread that changes the tracker.
+    worker = TrackerWorker(tracker).start()
+
     try:
-        _poll_until_stopped(client, tracker, stop_event)
+        # Producer: this thread polls and submits commands.
+        _poll_until_stopped(client, worker, stop_event, wait_first=wait_first)
     finally:
+        # Applies anything still queued before returning.
+        worker.stop()
+
         if owns_client:
             client.close()
 
@@ -127,18 +146,21 @@ def _create_client():
     return OpenSkyClient()
 
 
-def _poll_until_stopped(client, tracker, stop_event):
+def _poll_until_stopped(client, executor, stop_event, wait_first=False):
     logger.info(
         "Polling OpenSky every %d s (%s access)",
         config.POLL_INTERVAL_SECONDS,
         "authenticated" if client.authenticated else "anonymous",
     )
 
+    if wait_first:
+        _wait(stop_event, _next_wait_seconds(client))
+
     while stop_event is None or not stop_event.is_set():
         retry_after = None
 
         try:
-            poll_once(client, tracker)
+            poll_once(client, executor)
         except OpenSkyRateLimitError as error:
             retry_after = error.retry_after_seconds
             logger.warning("%s", error)

@@ -107,6 +107,69 @@ def test_apply_states_keeps_missing_aircraft_for_grace_period():
     assert tracker.aircrafts == {}
 
 
+# --- build_poll_commands / poll_once --------------------------------------
+
+def test_build_poll_commands_creates_updates_then_removals():
+    from commands import (
+        RemoveLowAltitudeAircraftCommand,
+        RemoveMissingAircraftCommand,
+        UpdateAircraftCommand,
+    )
+
+    batch, observed = main.build_poll_commands(
+        [make_state(callsign="A"), make_state(callsign="B"), "garbage"], 1000
+    )
+
+    assert observed == 2
+    assert [type(command) for command in batch.commands] == [
+        UpdateAircraftCommand,
+        UpdateAircraftCommand,
+        RemoveMissingAircraftCommand,
+        RemoveLowAltitudeAircraftCommand,
+    ]
+    assert batch.commands[2].observed_callsigns == {"A", "B"}
+
+
+class CollectingExecutor:
+    def __init__(self):
+        self.submitted = []
+
+    def submit(self, command):
+        self.submitted.append(command)
+
+
+def test_poll_once_submits_one_batch_without_touching_a_tracker():
+    executor = CollectingExecutor()
+    stop_event = threading.Event()
+    client = FakeClient([(1000, [make_state()])], stop_event)
+
+    main.poll_once(client, executor)
+
+    assert len(executor.submitted) == 1
+    assert len(executor.submitted[0]) == 3  # update + 2 removals
+
+
+class ThreadRecordingTracker(AircraftTracker):
+    def __init__(self):
+        super().__init__()
+        self.mutating_threads = set()
+
+    def add_aircraft(self, aircraft):
+        self.mutating_threads.add(threading.current_thread().name)
+        super().add_aircraft(aircraft)
+
+
+def test_main_applies_updates_on_the_worker_thread():
+    tracker = ThreadRecordingTracker()
+    stop_event = RecordingEvent()
+    client = FakeClient([(1000, [make_state()])], stop_event)
+
+    main.main(stop_event, client=client, tracker=tracker)
+
+    assert set(tracker.aircrafts) == {"TEST123"}
+    assert tracker.mutating_threads == {"tracker-worker"}
+
+
 # --- polling loop --------------------------------------------------------
 
 class FakeClient:
@@ -184,3 +247,14 @@ def test_polling_loop_waits_for_rate_limit_retry_after():
     main.main(stop_event, client=client, tracker=AircraftTracker())
 
     assert stop_event.waits == [3600]
+
+
+def test_wait_first_waits_before_the_first_poll():
+    stop_event = RecordingEvent()
+    client = FakeClient([(1000, [make_state()])], stop_event)
+
+    main.main(stop_event, client=client, tracker=AircraftTracker(), wait_first=True)
+
+    # One wait before the poll, one after it.
+    assert stop_event.waits == [config.POLL_INTERVAL_SECONDS] * 2
+    assert client.calls == 1

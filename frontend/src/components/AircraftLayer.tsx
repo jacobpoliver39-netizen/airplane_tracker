@@ -8,6 +8,7 @@ import {
   travel,
   type Track,
 } from "../animation/motion";
+import { simNowSeconds } from "../animation/clock";
 import {
   formatAltitude,
   formatHeading,
@@ -129,9 +130,13 @@ function remainingCorrection(correction: Correction, nowMs: number): number {
   return 1 - eased;
 }
 
-/** Where to draw an aircraft at nowMs, including any correction glide. */
-function computeFrame(entry: Entry, nowMs: number): Frame {
-  const sample = sampleTrack(entry.track, nowMs / 1000);
+/**
+ * Where to draw an aircraft, including any correction glide. The plane
+ * moves on simulation time (faster in a sped-up replay); the glide is a
+ * visual effect and always takes CORRECTION_MS of wall time.
+ */
+function computeFrame(entry: Entry, simSeconds: number, nowMs: number): Frame {
+  const sample = sampleTrack(entry.track, simSeconds);
   let heading = sample.heading ?? entry.plane.heading;
   let path = sample.remainingPath;
 
@@ -235,6 +240,7 @@ export default function AircraftLayer({
   useEffect(() => {
     const entries = entriesRef.current;
     const nowMs = Date.now();
+    const simSeconds = simNowSeconds();
     const seen = new Set<string>();
 
     for (const plane of aircraft) {
@@ -265,7 +271,7 @@ export default function AircraftLayer({
         entry.straightLine.addTo(map);
         entry.curvedLine.addTo(map);
         marker.addTo(map);
-        applyFrame(entry, computeFrame(entry, nowMs));
+        applyFrame(entry, computeFrame(entry, simSeconds, nowMs));
         entries.set(plane.id, entry);
         continue;
       }
@@ -275,14 +281,14 @@ export default function AircraftLayer({
       // the plane onto a new path.
       if (plane.timestamp !== existing.plane.timestamp) {
         // Glide from where the plane is drawn now onto the new path.
-        const before = computeFrame(existing, nowMs);
+        const before = computeFrame(existing, simSeconds, nowMs);
         const { track, turning } = buildTrack(plane);
         existing.plane = plane;
         existing.track = track;
         existing.turning = turning;
         existing.correction = null;
 
-        const after = computeFrame(existing, nowMs);
+        const after = computeFrame(existing, simSeconds, nowMs);
         const latitude = before.position[0] - after.position[0];
         const longitude = before.position[1] - after.position[1];
 
@@ -326,9 +332,10 @@ export default function AircraftLayer({
 
     const tick = () => {
       const nowMs = Date.now();
+      const simSeconds = simNowSeconds();
 
       for (const entry of entriesRef.current.values()) {
-        applyFrame(entry, computeFrame(entry, nowMs));
+        applyFrame(entry, computeFrame(entry, simSeconds, nowMs));
       }
 
       frameId = requestAnimationFrame(tick);

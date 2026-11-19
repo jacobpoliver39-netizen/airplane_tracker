@@ -45,6 +45,11 @@ MISSING_AIRCRAFT_GRACE_SECONDS = POLL_INTERVAL_SECONDS + 30
 # Aircraft on the ground or below this altitude (feet) are not tracked.
 MINIMUM_ALTITUDE_FEET = 10
 
+# Where collect_opensky.py writes CSVs and record_opensky.py writes
+# recordings. The dashboard lists both for replay.
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+RECORDINGS_DIR = os.path.join(DATA_DIR, "recordings")
+
 # Replay a recorded session (record_opensky.py) instead of polling
 # OpenSky. Set JACOBSKY_REPLAY to the recording file.
 REPLAY_FILE = os.environ.get("JACOBSKY_REPLAY") or None

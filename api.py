@@ -1,34 +1,36 @@
 
-import threading
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
-from main import main
 from logging_service import LoggingService
+from polling_service import (
+    MAX_REPLAY_SPEED,
+    MIN_REPLAY_SPEED,
+    PollingService,
+    RecordingNotFoundError,
+    SourceBusyError,
+)
 from ranking_strategies import RANKING_STRATEGIES
 from tracker_state import aircraft_tracker
+
+
+# Owns the polling thread and the current data source (live or replay).
+polling_service = PollingService(aircraft_tracker)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     LoggingService.initialize()
-    stop_event = threading.Event()
-    polling_thread = threading.Thread(
-        target=main,
-        args=(stop_event,),
-        daemon=True,
-    )
-
-    polling_thread.start()
+    polling_service.start()
 
     try:
         yield
     finally:
-        stop_event.set()
-        polling_thread.join(timeout=10)
+        polling_service.stop()
         LoggingService.reset()
 
 
@@ -39,7 +41,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -108,3 +110,62 @@ def get_aircraft(rank: Literal["nearest", "fastest", "predicted"] | None = None)
             serialize_aircraft(plane)
             for plane in aircraft_tracker.get_sorted_aircrafts(strategy).values()
         ]
+
+
+# --- data source: live or replay -------------------------------------------
+
+class ReplayRequest(BaseModel):
+    recording: str
+    speed: float = Field(default=1.0, ge=MIN_REPLAY_SPEED, le=MAX_REPLAY_SPEED)
+    loop: bool = False
+
+
+class SpeedRequest(BaseModel):
+    speed: float = Field(ge=MIN_REPLAY_SPEED, le=MAX_REPLAY_SPEED)
+
+
+@app.get("/source")
+def get_source():
+    """
+    Current data source. `clock.now` is the time the aircraft timestamps
+    are on (ahead of the wall clock in a sped-up replay) and
+    `clock.speed` how fast it runs, so the map can animate to match.
+    """
+    return polling_service.status()
+
+
+@app.get("/recordings")
+def get_recordings():
+    return polling_service.list_recordings()
+
+
+@app.post("/source/replay")
+def start_replay(request: ReplayRequest):
+    return _switch(
+        polling_service.start_replay,
+        request.recording,
+        speed=request.speed,
+        loop=request.loop,
+    )
+
+
+@app.post("/source/replay/speed")
+def set_replay_speed(request: SpeedRequest):
+    return _switch(polling_service.set_speed, request.speed)
+
+
+@app.post("/source/live")
+def go_live():
+    return _switch(polling_service.go_live)
+
+
+def _switch(action, *args, **kwargs):
+    try:
+        return action(*args, **kwargs)
+    except RecordingNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except SourceBusyError as error:
+        raise HTTPException(status_code=503, detail=str(error))
+    except ValueError as error:
+        # Bad speed, speed change while live, or an unreadable recording.
+        raise HTTPException(status_code=400, detail=str(error))

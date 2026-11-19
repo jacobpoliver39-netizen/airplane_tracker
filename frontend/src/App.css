@@ -693,3 +693,145 @@
   gap: 12px;
   padding: 32px;
 }
+
+/* --- Replay controls ---------------------------------------------------- */
+
+.replay-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+  border: 1px solid #263248;
+  border-radius: 9px;
+  background: #0b1220;
+}
+
+.replay-recording {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+
+.replay-button {
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.replay-button:hover:not(:disabled) {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.replay-button--primary {
+  border-color: #1d4ed8;
+  background: #172b45;
+  color: #93c5fd;
+}
+
+.replay-button:disabled,
+.replay-speed:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.replay-speeds {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.replay-label {
+  color: #64748b;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+}
+
+.replay-speed-buttons {
+  display: flex;
+  height: 40px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.replay-speed {
+  min-width: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid #334155;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.replay-speed:last-child {
+  border-right: 0;
+}
+
+.replay-speed:hover:not(:disabled) {
+  background: #111a2b;
+  color: #60a5fa;
+}
+
+.replay-speed--active {
+  background: #172b45;
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.replay-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 220px;
+  height: 40px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #1e293b;
+  overflow: hidden;
+}
+
+.replay-progress-fill {
+  height: 100%;
+  background: #60a5fa;
+  transition: width 0.4s linear;
+}
+
+.replay-error {
+  flex-basis: 100%;
+  color: #f87171;
+  font-size: 0.72rem;
+}
+
+.system-status--replay .status-dot {
+  background: #60a5fa;
+}
+
+@media (max-width: 600px) {
+  .replay-recording,
+  .replay-button,
+  .replay-speeds {
+    width: 100%;
+    max-width: none;
+  }
+
+  .replay-speed {
+    flex: 1;
+    min-width: 0;
+  }
+}

@@ -208,3 +208,13 @@ def test_predicted_approach_strategy_breaks_ties_by_current_distance():
     ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
 
     assert list(ranked) == ["NEAR", "FAR"]
+
+
+def test_clear_removes_all_aircraft():
+    tracker = AircraftTracker()
+    tracker.add_aircraft(FakeAircraft("A", 1.0))
+    tracker.add_aircraft(FakeAircraft("B", 2.0))
+
+    tracker.clear()
+
+    assert tracker.aircrafts == {}

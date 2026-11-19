@@ -5,6 +5,7 @@ import pytest
 import main
 import record_opensky
 from aircraft_tracker import AircraftTracker
+from command_queue import ImmediateCommandExecutor
 from flight_recording import (
     FlightRecorder,
     convert_csv_to_recording,
@@ -208,7 +209,7 @@ def test_replay_drives_the_tracker(recording):
 
     for wall_time in (50_000, 50_015, 50_045):
         clock.now = wall_time
-        main.poll_once(client, tracker)
+        main.poll_once(client, ImmediateCommandExecutor(tracker))
 
     plane = tracker.aircrafts["TEST123"]
     assert plane.timestamp == 50_044
@@ -297,7 +298,97 @@ def test_polling_loop_waits_for_replay_gaps(recording):
     client = ReplayOpenSkyClient(recording, clock=clock)
     stop_event = RecordingStopEvent(stop_after=2, clock=clock)
 
-    main._poll_until_stopped(client, AircraftTracker(), stop_event)
+    main._poll_until_stopped(
+        client, ImmediateCommandExecutor(AircraftTracker()), stop_event
+    )
 
     # Waits are timed from the frame just served: 15 s, then 30 s.
     assert stop_event.waits == [15, 30]
+
+
+# --- speed changes, simulation clock and progress -------------------------
+
+def test_sim_now_is_wall_clock_before_first_frame(recording):
+    client = ReplayOpenSkyClient(recording, speed=10, clock=FakeClock(50_000))
+
+    assert client.sim_now() == 50_000
+
+
+def test_sim_now_runs_at_replay_speed(recording):
+    clock = FakeClock(50_000)
+    client = ReplayOpenSkyClient(recording, speed=10, clock=clock)
+    client.get_states()
+
+    clock.now = 50_001
+
+    # One wall second is ten replay seconds.
+    assert client.sim_now() == 50_010
+
+
+def test_served_frames_match_sim_clock(recording):
+    clock = FakeClock(50_000)
+    client = ReplayOpenSkyClient(recording, speed=5, clock=clock)
+    client.get_states()
+
+    clock.now += client.seconds_until_next_poll()
+    response_time, _ = client.get_states()
+
+    assert response_time == pytest.approx(client.sim_now())
+
+
+def test_set_speed_keeps_position_and_shortens_wait(recording):
+    clock = FakeClock(50_000)
+    client = ReplayOpenSkyClient(recording, clock=clock)
+    client.get_states()
+
+    clock.now = 50_005  # 5 s into a 15 s gap at 1x
+    client.set_speed(5)
+
+    assert client.sim_now() == 50_005
+    # The remaining 10 replay seconds now take 2 wall seconds.
+    assert client.seconds_until_next_poll() == pytest.approx(2)
+
+    clock.now = 50_007
+    assert client.get_states()[0] == 50_015
+    assert client.speed == 5
+
+
+def test_set_speed_before_start_applies_from_first_frame(recording):
+    clock = FakeClock(50_000)
+    client = ReplayOpenSkyClient(recording, clock=clock)
+
+    client.set_speed(3)
+    client.get_states()
+
+    assert client.seconds_until_next_poll() == 5
+
+
+def test_set_speed_rejects_non_positive(recording):
+    client = ReplayOpenSkyClient(recording, clock=FakeClock())
+
+    with pytest.raises(ValueError):
+        client.set_speed(0)
+
+
+def test_progress_reports_position_and_end(recording):
+    clock = FakeClock(50_000)
+    client = ReplayOpenSkyClient(recording, speed=2, clock=clock)
+
+    assert client.progress()["position_seconds"] == 0
+    client.get_states()
+    clock.now = 50_010
+
+    progress = client.progress()
+    assert progress["position_seconds"] == 20
+    assert progress["duration_seconds"] == 45
+    assert progress["frame_index"] == 1
+    assert progress["frame_count"] == 3
+    assert progress["finished"] is False
+
+    for _ in range(3):
+        client.get_states()
+    clock.now = 51_000
+
+    progress = client.progress()
+    assert progress["position_seconds"] == 45  # clamped to the end
+    assert progress["finished"] is True

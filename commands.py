@@ -1,11 +1,71 @@
+"""
+Commands that change the tracker.
+
+A command holds only the data it needs (observations, callsigns,
+thresholds) and receives the tracker when it is executed. That keeps
+commands independent of where they run: the polling thread creates
+them, and the tracker worker (command_queue.TrackerWorker) executes
+them, or a test executes them directly.
+"""
+
+import logging
 from abc import ABC, abstractmethod
+
 from aircraft_tracker import AircraftTracker
+from observation import AircraftObservation
+
+logger = logging.getLogger(__name__)
+
 
 class Command(ABC):
 
     @abstractmethod
-    def execute(self) -> None:
+    def execute(self, tracker: AircraftTracker) -> None:
         pass
+
+
+def is_trackable(observation: AircraftObservation, minimum_altitude) -> bool:
+    """Return False for aircraft on the ground or below the minimum altitude."""
+    if observation.on_ground:
+        return False
+
+    return observation.altitude is None or observation.altitude >= minimum_altitude
+
+
+class UpdateAircraftCommand(Command):
+    """
+    Apply one observation to the tracker.
+
+    Updates the aircraft if it is already tracked, even when it is now
+    low or on the ground, so RemoveLowAltitudeAircraftCommand removes it
+    once. Otherwise adds a new aircraft built by the factory, unless it
+    is on the ground or below the minimum altitude.
+    """
+
+    def __init__(self, observation: AircraftObservation, factory, minimum_altitude):
+        self.observation = observation
+        self._factory = factory
+        self._minimum_altitude = minimum_altitude
+
+    def execute(self, tracker):
+        observation = self.observation
+
+        with tracker.lock:
+            existing = tracker.aircrafts.get(observation.callsign)
+
+            if existing is not None:
+                existing.update_info(
+                    observation.longitude,
+                    observation.latitude,
+                    observation.timestamp,
+                    observation.altitude,
+                    observation.heading,
+                    observation.velocity,
+                    new_on_ground=observation.on_ground,
+                )
+            elif is_trackable(observation, self._minimum_altitude):
+                tracker.add_aircraft(self._factory.create(observation))
+
 
 class RemoveMissingAircraftCommand(Command):
     """
@@ -18,50 +78,45 @@ class RemoveMissingAircraftCommand(Command):
 
     def __init__(
         self,
-        tracker: AircraftTracker,
         observed_callsigns: set[str],
         current_time: float | None = None,
         grace_seconds: float = 0,
     ) -> None:
-        self._tracker = tracker
-        self._observed_callsigns = observed_callsigns
-        self._current_time = current_time
-        self._grace_seconds = grace_seconds
+        self.observed_callsigns = observed_callsigns
+        self.current_time = current_time
+        self.grace_seconds = grace_seconds
 
-    def execute(self):
-        with self._tracker.lock:
-            missing_callsigns = (
-                self._tracker.aircrafts.keys() - self._observed_callsigns
-            )
+    def execute(self, tracker):
+        with tracker.lock:
+            missing_callsigns = tracker.aircrafts.keys() - self.observed_callsigns
 
             for callsign in missing_callsigns:
-                if self._is_expired(self._tracker.aircrafts[callsign]):
-                    self._tracker.remove_aircraft(callsign)
+                if self._is_expired(tracker.aircrafts[callsign]):
+                    tracker.remove_aircraft(callsign)
 
     def _is_expired(self, aircraft):
-        if self._current_time is None or self._grace_seconds <= 0:
+        if self.current_time is None or self.grace_seconds <= 0:
             return True
 
-        return self._current_time - aircraft.timestamp > self._grace_seconds
+        return self.current_time - aircraft.timestamp > self.grace_seconds
 
 
 class RemoveLowAltitudeAircraftCommand(Command):
     """Remove aircraft on the ground or below a specified minimum altitude."""
 
-    def __init__(self, tracker, minimum_altitude=10):
-        self._tracker = tracker
-        self._minimum_altitude = minimum_altitude
+    def __init__(self, minimum_altitude=10):
+        self.minimum_altitude = minimum_altitude
 
-    def execute(self):
-        with self._tracker.lock:
+    def execute(self, tracker):
+        with tracker.lock:
             low_altitude_callsigns = [
                 callsign
-                for callsign, aircraft in self._tracker.aircrafts.items()
+                for callsign, aircraft in tracker.aircrafts.items()
                 if self._is_low(aircraft)
             ]
 
             for callsign in low_altitude_callsigns:
-                self._tracker.remove_aircraft(callsign)
+                tracker.remove_aircraft(callsign)
 
     def _is_low(self, aircraft):
         if getattr(aircraft, "on_ground", False):
@@ -70,5 +125,26 @@ class RemoveLowAltitudeAircraftCommand(Command):
         # An unknown altitude is not evidence of being low.
         return (
             aircraft.altitude is not None
-            and aircraft.altitude < self._minimum_altitude
+            and aircraft.altitude < self.minimum_altitude
         )
+
+
+class CommandBatch(Command):
+    """
+    A list of commands executed in order as one unit (a macro command).
+
+    The tracker lock is held for the whole batch, so the API never sees
+    a poll half-applied (e.g. updated but not yet pruned).
+    """
+
+    def __init__(self, commands, label="batch"):
+        self.commands = list(commands)
+        self.label = label
+
+    def __len__(self):
+        return len(self.commands)
+
+    def execute(self, tracker):
+        with tracker.lock:
+            for command in self.commands:
+                command.execute(tracker)

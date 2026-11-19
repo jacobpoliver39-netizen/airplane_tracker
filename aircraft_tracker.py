@@ -45,6 +45,14 @@ class AircraftTracker:
 
         logger.info("Aircraft removed from tracker: %s", callsign)
 
+    def clear(self):
+        """Stop tracking every aircraft (e.g. when the data source changes)."""
+        with self.lock:
+            count = len(self.aircrafts)
+            self.aircrafts.clear()
+
+        logger.info("Tracker cleared (%d aircraft removed)", count)
+
     def get_sorted_aircrafts(self, ranking_strategy=None):
         """
         Return aircraft ranked by the given strategy, or by the tracker's

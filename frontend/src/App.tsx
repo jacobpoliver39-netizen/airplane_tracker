@@ -4,7 +4,10 @@ import AircraftList from "./components/AircraftList";
 import type { Aircraft } from "./types/aircraft";
 import "./App.css";
 import AircraftDetails from "./components/AircraftDetails";
-import { API_BASE_URL, POLL_INTERVAL_MS } from "./config";
+import ReplayControls from "./components/ReplayControls";
+import { API_BASE_URL, POLL_INTERVAL_MS, REPLAY_POLL_INTERVAL_MS } from "./config";
+import { syncSimClock } from "./animation/clock";
+import type { SourceStatus } from "./types/source";
 
 // "stale" = the last request failed but earlier data is still shown.
 type ConnectionStatus = "connecting" | "live" | "stale" | "offline";
@@ -33,11 +36,31 @@ function App() {
   const hasData = useRef(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting");
+  const [source, setSource] = useState<SourceStatus | null>(null);
+  // Bumped after switching source, to refetch straight away.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const replaying = source?.mode === "replay";
 
   useEffect(() => {
     let isMounted = true;
 
+    const fetchSource = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/source`);
+        if (!response.ok) return;
+        const data = (await response.json()) as SourceStatus;
+        if (isMounted) {
+          syncSimClock(data.clock.now, data.clock.speed);
+          setSource(data);
+        }
+      } catch {
+        // Reported through the aircraft request below.
+      }
+    };
+
     const fetchAircraft = async () => {
+      fetchSource();
+
       try {
         const response = await fetch(`${API_BASE_URL}/aircraft?rank=${rank}`);
 
@@ -67,14 +90,18 @@ function App() {
 
     fetchAircraft();
 
-    const intervalId = setInterval(fetchAircraft, POLL_INTERVAL_MS);
+    // A sped-up replay moves planes much further between polls.
+    const intervalId = setInterval(
+      fetchAircraft,
+      replaying ? REPLAY_POLL_INTERVAL_MS : POLL_INTERVAL_MS,
+    );
 
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-    // Refetch immediately when the ranking changes.
-  }, [rank]);
+    // Refetch immediately when the ranking or the source changes.
+  }, [rank, replaying, refreshKey]);
 
   const filteredAircraft = aircraft.filter((plane) => {
     const matchesSearch = (plane.callsign ?? "")
@@ -113,9 +140,15 @@ function App() {
           </div>
         </div>
 
-        <div className={`system-status system-status--${connectionStatus}`}>
+        <div
+          className={`system-status system-status--${connectionStatus}${
+            replaying ? " system-status--replay" : ""
+          }`}
+        >
           <span className="status-dot" />
-          {STATUS_LABELS[connectionStatus]}
+          {replaying && connectionStatus === "live"
+            ? `REPLAY · ${source.speed}×`
+            : STATUS_LABELS[connectionStatus]}
         </div>
       </header>
 
@@ -141,6 +174,15 @@ function App() {
           <h3>Air traffic overview</h3>
           <span>THESSALONIKI · GREECE</span>
         </div>
+
+        <ReplayControls
+          source={source}
+          onSourceChange={(status) => {
+            syncSimClock(status.clock.now, status.clock.speed);
+            setSource(status);
+            setRefreshKey((key) => key + 1);
+          }}
+        />
 
         <div className="filter-bar">
           <div className="search-control">
