@@ -45,7 +45,19 @@ class AircraftTracker:
 
         logger.info("Aircraft removed from tracker: %s", callsign)
 
-    def get_sorted_aircrafts(self):
-        """Return aircraft ranked using the currently selected strategy."""
+    def get_sorted_aircrafts(self, ranking_strategy=None):
+        """
+        Return aircraft ranked by the given strategy, or by the tracker's
+        default strategy when none is given. Passing a strategy per call
+        (as the API does) avoids changing the shared default.
+        """
+        strategy = (
+            ranking_strategy if ranking_strategy is not None
+            else self._ranking_strategy
+        )
+
+        if not isinstance(strategy, RankingStrategy):
+            raise TypeError("ranking_strategy must implement RankingStrategy")
+
         with self.lock:
-            return self._ranking_strategy.sort_aircrafts(dict(self.aircrafts))
+            return strategy.sort_aircrafts(dict(self.aircrafts))

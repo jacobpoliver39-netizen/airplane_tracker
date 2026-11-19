@@ -10,6 +10,7 @@ from flight_recording import (
     convert_csv_to_recording,
     load_recording,
 )
+from opensky_adapter import OpenSkyAdapter
 from opensky_client import OpenSkyRateLimitError
 from replay_client import ReplayOpenSkyClient
 
@@ -111,7 +112,7 @@ def test_convert_csv_groups_rows_into_frames(tmp_path):
     assert first_state[8] is False and frames[1].states[0][8] is True
     assert first_state[11] is None and first_state[14] == "1234"
     # The tracker can parse the rebuilt state arrays.
-    assert main.parse_state(first_state).callsign == "AAA1"
+    assert OpenSkyAdapter.parse_state(first_state).callsign == "AAA1"
 
 
 # --- replay client -------------------------------------------------------

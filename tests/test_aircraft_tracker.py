@@ -115,9 +115,96 @@ def test_tracker_can_switch_ranking_strategies():
 
     assert list(sorted_aircraft) == ["FAR_FAST", "NEAR_SLOW"]
 
+def test_get_sorted_aircrafts_uses_given_strategy_without_changing_default():
+    from ranking_strategies import FastestApproachStrategy, NearestStrategy
+
+    tracker = AircraftTracker()
+    tracker.add_aircraft(
+        FakeAircraftWithApproachSpeed("FAR_FAST", 30.0, 400.0)
+    )
+    tracker.add_aircraft(
+        FakeAircraftWithApproachSpeed("NEAR_SLOW", 5.0, 100.0)
+    )
+
+    ranked = tracker.get_sorted_aircrafts(FastestApproachStrategy())
+
+    assert list(ranked) == ["FAR_FAST", "NEAR_SLOW"]
+    assert isinstance(tracker._ranking_strategy, NearestStrategy)
+    assert list(tracker.get_sorted_aircrafts()) == ["NEAR_SLOW", "FAR_FAST"]
+
+
+def test_get_sorted_aircrafts_rejects_invalid_strategy():
+    import pytest
+
+    with pytest.raises(TypeError):
+        AircraftTracker().get_sorted_aircrafts(object())
+
+
 def test_tracker_rejects_invalid_ranking_strategy():
     import pytest
 
     with pytest.raises(TypeError):
         AircraftTracker(ranking_strategy=object())
 
+
+
+class FakeAircraftWithPrediction:
+    def __init__(self, callsign, distance, straight_nearest, curved_nearest):
+        self.callsign = callsign
+        self.distance = distance
+        self.straight_nearest = straight_nearest
+        self.curved_nearest = curved_nearest
+
+    def get_distance_from_user(self):
+        return self.distance
+
+    def get_nearest_distance_from_user(self):
+        return self.straight_nearest
+
+    def get_curved_nearest_approach(self):
+        if self.curved_nearest is None:
+            return None
+        return (self.curved_nearest, 30.0)
+
+
+def test_predicted_approach_strategy_ranks_closest_predicted_pass_first():
+    from ranking_strategies import NearestPredictedApproachStrategy
+
+    aircrafts = {
+        # Nearest now, but flying away: predicted approach = 5 miles.
+        "NEAR_LEAVING": FakeAircraftWithPrediction("NEAR_LEAVING", 5.0, 5.0, None),
+        # Farther now, but heading almost straight overhead.
+        "FAR_OVERHEAD": FakeAircraftWithPrediction("FAR_OVERHEAD", 20.0, 0.5, 0.8),
+        "MID_PASSING": FakeAircraftWithPrediction("MID_PASSING", 10.0, 3.0, None),
+    }
+
+    ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
+
+    assert list(ranked) == ["FAR_OVERHEAD", "MID_PASSING", "NEAR_LEAVING"]
+
+
+def test_predicted_approach_strategy_prefers_curved_over_straight():
+    from ranking_strategies import NearestPredictedApproachStrategy
+
+    aircrafts = {
+        # Straight line says 1 mile, but the turn takes it 8 miles away.
+        "TURNING_AWAY": FakeAircraftWithPrediction("TURNING_AWAY", 10.0, 1.0, 8.0),
+        "STRAIGHT": FakeAircraftWithPrediction("STRAIGHT", 10.0, 4.0, None),
+    }
+
+    ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
+
+    assert list(ranked) == ["STRAIGHT", "TURNING_AWAY"]
+
+
+def test_predicted_approach_strategy_breaks_ties_by_current_distance():
+    from ranking_strategies import NearestPredictedApproachStrategy
+
+    aircrafts = {
+        "FAR": FakeAircraftWithPrediction("FAR", 30.0, 2.0, None),
+        "NEAR": FakeAircraftWithPrediction("NEAR", 10.0, 2.0, None),
+    }
+
+    ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
+
+    assert list(ranked) == ["NEAR", "FAR"]

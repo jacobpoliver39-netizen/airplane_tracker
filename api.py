@@ -1,12 +1,14 @@
 
 import threading
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from main import main
 from logging_service import LoggingService
+from ranking_strategies import RANKING_STRATEGIES
 from tracker_state import aircraft_tracker
 
 
@@ -92,11 +94,17 @@ def serialize_aircraft(plane):
 
 
 @app.get("/aircraft")
-def get_aircraft():
+def get_aircraft(rank: Literal["nearest", "fastest", "predicted"] | None = None):
+    """
+    Return tracked aircraft ranked by `rank` (a RANKING_STRATEGIES key).
+    Without `rank`, the tracker's default strategy is used.
+    """
+    strategy = RANKING_STRATEGIES[rank] if rank is not None else None
+
     # Hold the tracker lock so the polling thread cannot change an
     # aircraft's history while it is being read.
     with aircraft_tracker.lock:
         return [
             serialize_aircraft(plane)
-            for plane in aircraft_tracker.get_sorted_aircrafts().values()
+            for plane in aircraft_tracker.get_sorted_aircrafts(strategy).values()
         ]

@@ -1,86 +1,22 @@
 import logging
 import time
-from dataclasses import dataclass
 
 import requests
 
 import config
-from aircraft import Aircraft
+from aircraft_factory import AircraftFactory
 from commands import RemoveLowAltitudeAircraftCommand, RemoveMissingAircraftCommand
 from logging_service import LoggingService
+from opensky_adapter import OpenSkyAdapter
 from opensky_client import OpenSkyClient, OpenSkyRateLimitError
 from tracker_state import aircraft_tracker
 
 logger = logging.getLogger(__name__)
 
-METERS_TO_FEET = 3.28084
-METERS_PER_SECOND_TO_MPH = 2.236936
-
-
-@dataclass(frozen=True)
-class Observation:
-    """One aircraft state from OpenSky, converted to tracker units."""
-
-    callsign: str
-    timestamp: float
-    longitude: float
-    latitude: float
-    altitude: float | None  # feet, None when OpenSky has no altitude
-    on_ground: bool
-    velocity: float  # mph
-    heading: float  # degrees
-    country_of_origin: str | None
-
-
-def _is_number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
-
-
-def parse_state(state):
-    """
-    Convert one OpenSky state array to an Observation.
-
-    Returns None for states without a callsign or without the fields
-    the predictions need (position, position time, velocity, heading).
-    Index layout: 1 callsign, 2 country, 3 time_position, 5 lon, 6 lat,
-    7 baro altitude (m), 8 on_ground, 9 velocity (m/s), 10 true track.
-    """
-    if not isinstance(state, (list, tuple)) or len(state) < 11:
-        return None
-
-    callsign = state[1]
-
-    if not isinstance(callsign, str) or not callsign.strip():
-        return None
-
-    timestamp = state[3]
-    longitude = state[5]
-    latitude = state[6]
-    velocity = state[9]
-    heading = state[10]
-
-    if not all(
-        _is_number(value)
-        for value in (timestamp, longitude, latitude, velocity, heading)
-    ):
-        return None
-
-    altitude = state[7]
-    altitude = (
-        round(altitude * METERS_TO_FEET, 1) if _is_number(altitude) else None
-    )
-
-    return Observation(
-        callsign=callsign.strip(),
-        timestamp=timestamp,
-        longitude=longitude,
-        latitude=latitude,
-        altitude=altitude,
-        on_ground=bool(state[8]),
-        velocity=round(velocity * METERS_PER_SECOND_TO_MPH, 2),
-        heading=heading,
-        country_of_origin=state[2],
-    )
+# Default adapter (OpenSky format -> AircraftObservation) and factory
+# (AircraftObservation -> Aircraft) used by the polling loop.
+default_adapter = OpenSkyAdapter()
+default_factory = AircraftFactory(config.USER_LONGITUDE, config.USER_LATITUDE)
 
 
 def is_trackable(observation, minimum_altitude=config.MINIMUM_ALTITUDE_FEET):
@@ -91,27 +27,16 @@ def is_trackable(observation, minimum_altitude=config.MINIMUM_ALTITUDE_FEET):
     return observation.altitude is None or observation.altitude >= minimum_altitude
 
 
-def apply_states(tracker, states, response_time):
+def apply_states(tracker, states, response_time, adapter=None, factory=None):
     """
     Update the tracker from one validated OpenSky response.
 
     Returns the number of aircraft observed in the response.
     """
-    observations = []
-    skipped = 0
+    adapter = adapter if adapter is not None else default_adapter
+    factory = factory if factory is not None else default_factory
 
-    for state in states or []:
-        observation = parse_state(state)
-
-        if observation is None:
-            skipped += 1
-            continue
-
-        observations.append(observation)
-
-    if skipped:
-        logger.debug("Skipped %d incomplete OpenSky states", skipped)
-
+    observations = adapter.to_observations(states)
     observed_callsigns = {observation.callsign for observation in observations}
 
     with tracker.lock:
@@ -131,21 +56,7 @@ def apply_states(tracker, states, response_time):
                     new_on_ground=observation.on_ground,
                 )
             elif is_trackable(observation):
-                tracker.add_aircraft(
-                    Aircraft(
-                        observation.callsign,
-                        observation.timestamp,
-                        observation.longitude,
-                        observation.latitude,
-                        observation.altitude,
-                        observation.heading,
-                        observation.country_of_origin,
-                        observation.velocity,
-                        config.USER_LONGITUDE,
-                        config.USER_LATITUDE,
-                        on_ground=observation.on_ground,
-                    )
-                )
+                tracker.add_aircraft(factory.create(observation))
 
         RemoveMissingAircraftCommand(
             tracker,

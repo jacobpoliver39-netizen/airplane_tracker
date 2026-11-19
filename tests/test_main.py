@@ -36,48 +36,6 @@ def make_state(
     ]
 
 
-# --- parse_state ---------------------------------------------------------
-
-def test_parse_state_converts_units_and_strips_callsign():
-    observation = main.parse_state(make_state())
-
-    assert observation.callsign == "TEST123"
-    assert observation.altitude == pytest.approx(9842.5, abs=0.1)
-    assert observation.velocity == pytest.approx(447.39, abs=0.01)
-    assert observation.heading == 90.0
-    assert observation.on_ground is False
-
-
-@pytest.mark.parametrize(
-    "field",
-    ["time_position", "longitude", "latitude", "velocity", "heading"],
-)
-def test_parse_state_skips_state_missing_required_field(field):
-    assert main.parse_state(make_state(**{field: None})) is None
-
-
-@pytest.mark.parametrize("callsign", [None, "", "   ", 42])
-def test_parse_state_skips_invalid_callsign(callsign):
-    assert main.parse_state(make_state(callsign=callsign)) is None
-
-
-def test_parse_state_skips_short_or_non_list_state():
-    assert main.parse_state(["abc", "TEST"]) is None
-    assert main.parse_state("not a state") is None
-
-
-def test_parse_state_keeps_missing_altitude_as_none():
-    observation = main.parse_state(make_state(baro_altitude=None))
-
-    assert observation.altitude is None
-
-
-def test_parse_state_keeps_zero_velocity():
-    observation = main.parse_state(make_state(velocity=0.0))
-
-    assert observation.velocity == 0
-
-
 # --- apply_states --------------------------------------------------------
 
 def test_apply_states_adds_and_updates_aircraft():

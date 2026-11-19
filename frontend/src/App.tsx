@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AircraftMap from "./components/AircraftMap";
 import AircraftList from "./components/AircraftList";
 import type { Aircraft } from "./types/aircraft";
@@ -8,6 +8,9 @@ import { API_BASE_URL, POLL_INTERVAL_MS } from "./config";
 
 // "stale" = the last request failed but earlier data is still shown.
 type ConnectionStatus = "connecting" | "live" | "stale" | "offline";
+
+// Must match RANKING_STRATEGIES in ranking_strategies.py.
+type RankOption = "nearest" | "fastest" | "predicted";
 
 const STATUS_LABELS: Record<ConnectionStatus, string> = {
   connecting: "CONNECTING",
@@ -23,17 +26,20 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [distanceFilter, setDistanceFilter] = useState("all");
   const [altitudeFilter, setAltitudeFilter] = useState("all");
+  const [rank, setRank] = useState<RankOption>("nearest");
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  // Kept across rank changes so a failed request after switching
+  // shows "stale" rather than "offline".
+  const hasData = useRef(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting");
 
   useEffect(() => {
     let isMounted = true;
-    let hasData = false;
 
     const fetchAircraft = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/aircraft`);
+        const response = await fetch(`${API_BASE_URL}/aircraft?rank=${rank}`);
 
         if (!response.ok) {
           throw new Error(`API request failed: ${response.status}`);
@@ -46,7 +52,7 @@ function App() {
         }
 
         if (isMounted) {
-          hasData = true;
+          hasData.current = true;
           setAircraft(data as Aircraft[]);
           setConnectionStatus("live");
         }
@@ -54,7 +60,7 @@ function App() {
         console.error("Failed to fetch aircraft:", error);
 
         if (isMounted) {
-          setConnectionStatus(hasData ? "stale" : "offline");
+          setConnectionStatus(hasData.current ? "stale" : "offline");
         }
       }
     };
@@ -67,7 +73,8 @@ function App() {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, []);
+    // Refetch immediately when the ranking changes.
+  }, [rank]);
 
   const filteredAircraft = aircraft.filter((plane) => {
     const matchesSearch = (plane.callsign ?? "")
@@ -172,6 +179,19 @@ function App() {
               <option value="low">Below 10,000 ft</option>
               <option value="medium">10,000–25,000 ft</option>
               <option value="high">Above 25,000 ft</option>
+            </select>
+          </div>
+
+          <div className="filter-control">
+            <label htmlFor="rank-select">SORT BY</label>
+            <select
+              id="rank-select"
+              value={rank}
+              onChange={(event) => setRank(event.target.value as RankOption)}
+            >
+              <option value="nearest">Nearest first</option>
+              <option value="fastest">Fastest approach</option>
+              <option value="predicted">Nearest predicted approach</option>
             </select>
           </div>
 

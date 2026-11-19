@@ -1,11 +1,15 @@
+import inspect
 import threading
+import typing
+
+import pytest
 
 import api
 from fastapi.testclient import TestClient
 
 from aircraft import Aircraft
 from aircraft_tracker import AircraftTracker
-from ranking_strategies import FastestApproachStrategy
+from ranking_strategies import RANKING_STRATEGIES, FastestApproachStrategy
 
 
 class FakeAircraft:
@@ -77,6 +81,58 @@ def test_aircraft_endpoint_uses_selected_ranking_strategy(monkeypatch):
         "FAR_FAST",
         "NEAR_SLOW",
     ]
+
+
+@pytest.mark.parametrize(
+    "rank, expected",
+    [
+        ("nearest", ["NEAR_SLOW", "FAR_FAST"]),
+        ("fastest", ["FAR_FAST", "NEAR_SLOW"]),
+        # FakeAircraft has no curved prediction, so this uses the
+        # straight-line nearest distance (5 vs 30 miles).
+        ("predicted", ["NEAR_SLOW", "FAR_FAST"]),
+    ],
+)
+def test_aircraft_endpoint_ranks_by_query_parameter(monkeypatch, rank, expected):
+    tracker = make_tracker()
+    monkeypatch.setattr(api, "aircraft_tracker", tracker)
+
+    client = TestClient(api.app)
+    response = client.get("/aircraft", params={"rank": rank})
+
+    assert response.status_code == 200
+    assert [plane["callsign"] for plane in response.json()] == expected
+
+
+def test_rank_parameter_does_not_change_tracker_default(monkeypatch):
+    tracker = make_tracker()
+    monkeypatch.setattr(api, "aircraft_tracker", tracker)
+    client = TestClient(api.app)
+
+    client.get("/aircraft", params={"rank": "fastest"})
+    response = client.get("/aircraft")
+
+    assert [plane["callsign"] for plane in response.json()] == [
+        "NEAR_SLOW",
+        "FAR_FAST",
+    ]
+
+
+def test_aircraft_endpoint_rejects_unknown_rank(monkeypatch):
+    monkeypatch.setattr(api, "aircraft_tracker", make_tracker())
+
+    client = TestClient(api.app)
+    response = client.get("/aircraft", params={"rank": "slowest"})
+
+    assert response.status_code == 422
+
+
+def test_rank_options_match_ranking_strategies():
+    # The Literal on the endpoint must list exactly the registered strategies.
+    rank_param = inspect.signature(api.get_aircraft).parameters["rank"]
+    literal = typing.get_args(rank_param.annotation)[0]
+
+    assert set(typing.get_args(literal)) == set(RANKING_STRATEGIES)
 
 
 def test_aircraft_endpoint_preserves_response_fields(monkeypatch):
