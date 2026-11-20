@@ -104,13 +104,23 @@ def _wait(stop_event, seconds):
         stop_event.wait(seconds)
 
 
-def main(stop_event=None, client=None, tracker=aircraft_tracker, wait_first=False):
+def main(
+    stop_event=None,
+    client=None,
+    tracker=aircraft_tracker,
+    wait_first=False,
+    executor=None,
+):
     """
     Poll `client` (OpenSky, or a replay from JACOBSKY_REPLAY) until
     stop_event is set. A client passed in is not closed here.
 
     wait_first: wait until the client's next poll is due before the
     first poll, used when resuming a replay that was already running.
+
+    executor: where to submit commands. Without one, a TrackerWorker is
+    started here and drained when polling stops. One passed in (by
+    PollingService) is left running.
     """
     LoggingService.initialize()
 
@@ -118,14 +128,17 @@ def main(stop_event=None, client=None, tracker=aircraft_tracker, wait_first=Fals
     client = client if client is not None else _create_client()
 
     # Consumer: the only thread that changes the tracker.
-    worker = TrackerWorker(tracker).start()
+    owns_executor = executor is None
+    if owns_executor:
+        executor = TrackerWorker(tracker).start()
 
     try:
         # Producer: this thread polls and submits commands.
-        _poll_until_stopped(client, worker, stop_event, wait_first=wait_first)
+        _poll_until_stopped(client, executor, stop_event, wait_first=wait_first)
     finally:
-        # Applies anything still queued before returning.
-        worker.stop()
+        if owns_executor:
+            # Applies anything still queued before returning.
+            executor.stop()
 
         if owns_client:
             client.close()

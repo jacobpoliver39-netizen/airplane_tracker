@@ -5,6 +5,14 @@ from calculator import Calculator
 logger = logging.getLogger(__name__)
 
 class Aircraft:
+    """
+    One tracked aircraft: its current state, its position history, and
+    values measured from them (distance, bearing, approach speed).
+
+    Predictions (trajectories, nearest approach, accuracy scoring) live
+    in trajectory_predictor.TrajectoryPredictor, and accuracy scores are
+    collected by tracker_observers.PredictionAccuracyObserver.
+    """
 
     def __init__(self, callsign, timestamp, longitude, latitude, altitude, heading, country_of_origin, velocity, user_longitude, user_latitude, on_ground=False):
         self.callsign = callsign
@@ -24,23 +32,8 @@ class Aircraft:
         self.bearing_from_user = self.get_bearing_from_user_to_plane()
         logger.debug("Aircraft created: %s", self.callsign)
         self.update_location_history()
-        self.prediction_errors = []
 
     def update_info(self, new_longitude, new_latitude, new_timestamp, new_altitude, new_heading, new_velocity, new_on_ground=False):
-        if new_timestamp > self.timestamp:
-            snapshot = self.create_prediction_snapshot()
-
-            result = self.evaluate_prediction_snapshot(
-                snapshot,
-                actual_timestamp=new_timestamp,
-                actual_longitude=new_longitude,
-                actual_latitude=new_latitude,
-            )
-
-            if result is not None:
-                self.prediction_errors.append(result)
-                self.prediction_errors = self.prediction_errors[-500:]
-
         self.longitude = new_longitude
         self.latitude = new_latitude
         self.timestamp = new_timestamp
@@ -92,234 +85,7 @@ class Aircraft:
 
         return round(sum(approach_speeds) / len(approach_speeds), 2)
 
-    def get_estimated_turn_rate(self):
-        """Estimate recent ground-track turn rate in degrees per second."""
-        positions = sorted(self.location_history.items())[-6:]
-
-        observations = [
-            (
-                timestamp,
-                position.get_longitude(),
-                position.get_latitude(),
-            )
-            for timestamp, position in positions
-        ]
-
-        return Calculator.estimate_turn_rate(observations)
-
-    def get_estimated_ground_motion(self):
-        """Estimate current ground speed and track direction."""
-        positions = sorted(self.location_history.items())[-6:]
-
-        observations = [
-            (
-                timestamp,
-                position.get_longitude(),
-                position.get_latitude(),
-            )
-            for timestamp, position in positions
-        ]
-
-        return Calculator.estimate_ground_motion(observations)
-
-    def create_prediction_snapshot(self):
-        """
-        Capture the state both predictions start from: the reported
-        speed and heading, plus the estimated turn rate for the curve.
-        """
-        return {
-            "timestamp": self.timestamp,
-            "longitude": self.longitude,
-            "latitude": self.latitude,
-            "speed": self.velocity,
-            "heading": self.heading,
-            "turn_rate": self.get_estimated_turn_rate(),
-        }
-
-    def evaluate_prediction_snapshot(
-        self,
-        snapshot,
-        actual_timestamp,
-        actual_longitude,
-        actual_latitude,
-    ):
-        """Compare saved predictions with a later observed position."""
-        elapsed_seconds = actual_timestamp - snapshot["timestamp"]
-
-        if elapsed_seconds <= 0:
-            return None
-
-        def prediction_error(turn_rate):
-            displacement = Calculator.predict_ctrv_position(
-                snapshot["speed"],
-                snapshot["heading"],
-                turn_rate,
-                elapsed_seconds,
-            )
-
-            if displacement is None:
-                return None
-
-            longitude, latitude = Calculator.local_coordinates_to_gps(
-                displacement[0],
-                displacement[1],
-                snapshot["longitude"],
-                snapshot["latitude"],
-            )
-
-            return Calculator.calculate_haversine_distance(
-                longitude, latitude, actual_longitude, actual_latitude
-            )
-
-        turn_rate = snapshot["turn_rate"]
-
-        return {
-            "timestamp": snapshot["timestamp"],
-            "elapsed_seconds": elapsed_seconds,
-            "straight_error_miles": prediction_error(0),
-            # Curved prediction only when the snapshot had enough history.
-            "curved_error_miles": (
-                prediction_error(turn_rate) if turn_rate is not None else None
-            ),
-        }
-
-    def get_curved_nearest_approach(self):
-        """
-        Estimate the closest future distance along the curved (CTRV) path.
-        Returns (distance_miles, time_seconds), or None if there is not
-        enough history or the closest point is outside the window.
-        """
-        turn_rate = self.get_estimated_turn_rate()
-
-        if turn_rate is None:
-            return None
-
-        aircraft_east, aircraft_north = (
-            Calculator.gps_to_local_coordinates(
-                self.longitude,
-                self.latitude,
-                self.user_longitude,
-                self.user_latitude,
-            )
-        )
-
-        return Calculator.nearest_approach_ctrv(
-            aircraft_east=aircraft_east,
-            aircraft_north=aircraft_north,
-            speed_mph=self.velocity,
-            ground_track_degrees=self.heading,
-            turn_rate_degrees_per_second=turn_rate,
-            prediction_seconds=60,
-            sample_interval_seconds=2,
-        )
-
-    def get_curved_trajectory(
-        self,
-        prediction_seconds=60,
-        sample_interval_seconds=5,
-    ):
-        """
-        Future [latitude, longitude] points along the curved (CTRV) path,
-        one every sample_interval_seconds from the current position, or
-        None if there is not enough history to estimate a turn rate.
-
-        The path starts from the reported heading, which is the aircraft's
-        current track. The history only supplies the turn rate: a track
-        fitted to past positions lags behind a turning aircraft, which made
-        the curve leave the aircraft at an angle.
-        """
-        turn_rate = self.get_estimated_turn_rate()
-
-        if turn_rate is None:
-            return None
-
-        return self._sample_trajectory(
-            turn_rate, prediction_seconds, sample_interval_seconds
-        )
-
-    def get_straight_trajectory(
-        self,
-        prediction_seconds=60,
-        sample_interval_seconds=5,
-    ):
-        """
-        Future [latitude, longitude] points along the reported heading at
-        the reported speed, sampled like get_curved_trajectory().
-        """
-        return self._sample_trajectory(
-            0, prediction_seconds, sample_interval_seconds
-        )
-
-    def _sample_trajectory(
-        self,
-        turn_rate,
-        prediction_seconds,
-        sample_interval_seconds,
-    ):
-        if prediction_seconds < 0 or sample_interval_seconds <= 0:
-            return None
-
-        trajectory = []
-
-        for elapsed_seconds in range(
-            0,
-            prediction_seconds + 1,
-            sample_interval_seconds,
-        ):
-            displacement = Calculator.predict_ctrv_position(
-                self.velocity,
-                self.heading,
-                turn_rate,
-                elapsed_seconds,
-            )
-
-            if displacement is None:
-                return None
-
-            longitude, latitude = Calculator.local_coordinates_to_gps(
-                displacement[0],
-                displacement[1],
-                self.longitude,
-                self.latitude,
-            )
-
-            trajectory.append([latitude, longitude])
-
-        return trajectory
-
-    def get_nearest_distance_from_user(self):
-        return Calculator.nearest_approach(self.bearing_from_user, self.distance_from_user, self.heading)
-
-    def get_nearest_distance_time(self):
-        return Calculator.nearest_approach_time(self.bearing_from_user, self.distance_from_user, self.heading, self.velocity)
-
     
-    def get_approach_status(self):
-        """Classify the aircraft's current approach situation."""
-        positions = sorted(self.location_history.items())
-
-        # Check whether the aircraft was getting closer and
-        # has now started moving farther away.
-        if len(positions) >= 3:
-            earlier_distance = positions[-3][1].get_distance_from_user()
-            previous_distance = positions[-2][1].get_distance_from_user()
-            current_distance = self.distance_from_user
-
-            if (
-                previous_distance < earlier_distance
-                and current_distance > previous_distance
-            ):
-                return "passed"
-
-        # If the geometry predicts a future closest point,
-        # classify the aircraft as approaching.
-        time_to_closest = self.get_nearest_distance_time()
-
-        if time_to_closest is not None and time_to_closest > 0:
-            return "approaching"
-
-        return "moving_away"
-
     def get_closest_distance_so_far(self):
         """Return the smallest recorded distance from the user."""
         if not self.location_history:

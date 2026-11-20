@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from trajectory_predictor import DEFAULT_PREDICTOR
+
 
 class RankingStrategy(ABC):
     """Interface for ranking aircraft."""
@@ -47,14 +49,17 @@ class NearestPredictedApproachStrategy(RankingStrategy):
     is its current distance. Ties are broken by current distance.
     """
 
-    @staticmethod
-    def predicted_approach_distance(aircraft):
-        curved = aircraft.get_curved_nearest_approach()
+    def __init__(self, predictor=DEFAULT_PREDICTOR):
+        self._predictor = predictor
 
-        if curved is not None:
-            return curved[0]
+    def predicted_approach_distance(self, aircraft):
+        for strategy in ("curved", "straight"):
+            approach = self._predictor.nearest_approach(aircraft, strategy)
 
-        return aircraft.get_nearest_distance_from_user()
+            if approach is not None:
+                return approach.distance_miles
+
+        return aircraft.get_distance_from_user()
 
     def sort_aircrafts(self, aircrafts):
         return dict(sorted(

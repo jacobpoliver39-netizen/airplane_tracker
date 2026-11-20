@@ -45,6 +45,19 @@ MISSING_AIRCRAFT_GRACE_SECONDS = POLL_INTERVAL_SECONDS + 30
 # Aircraft on the ground or below this altitude (feet) are not tracked.
 MINIMUM_ALTITUDE_FEET = 10
 
+# Circular geofences watched by GeofenceObserver (enter/exit events).
+GEOFENCES = [
+    {
+        "name": "ACT Campus",
+        "longitude": USER_LONGITUDE,
+        "latitude": USER_LATITUDE,
+        "radius_miles": 5.0,
+    },
+]
+
+# ClosestApproachObserver only reports passes at least this close.
+CLOSEST_APPROACH_REPORT_MILES = 10.0
+
 # Where collect_opensky.py writes CSVs and record_opensky.py writes
 # recordings. The dashboard lists both for replay.
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")

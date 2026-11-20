@@ -243,3 +243,30 @@ def test_csv_is_converted_once_and_again_when_it_changes(dirs, monkeypatch):
         assert [p.name for p in converted.iterdir()] == ["observations.jsonl"]
     finally:
         service.stop()
+
+
+def test_one_worker_serves_every_source(service):
+    assert wait_for(lambda: service.worker_status()["processed"] >= 1)
+    before = service.worker_status()["processed"]
+
+    service.start_replay("session.jsonl")
+    assert wait_for(lambda: service.worker_status()["processed"] > before)
+
+    status = service.worker_status()
+    assert status["running"] is True
+    assert status["failed"] == 0
+
+
+def test_stop_stops_the_worker(dirs):
+    data_dir, recordings_dir = dirs
+    service = PollingService(
+        AircraftTracker(),
+        live_client_factory=FakeLiveClient,
+        recordings_dir=recordings_dir,
+        data_dir=data_dir,
+    )
+    service.start()
+
+    service.stop()
+
+    assert service.worker_status()["running"] is False

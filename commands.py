@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 
 from aircraft_tracker import AircraftTracker
 from observation import AircraftObservation
+from trajectory_predictor import DEFAULT_PREDICTOR
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,24 @@ class UpdateAircraftCommand(Command):
     low or on the ground, so RemoveLowAltitudeAircraftCommand removes it
     once. Otherwise adds a new aircraft built by the factory, unless it
     is on the ground or below the minimum altitude.
+
+    For a newer position, the predictor first snapshots each strategy's
+    prediction from the old state, then scores it against the new
+    position. The tracker then tells its observers about the update,
+    with that score (PredictionAccuracyObserver collects them).
     """
 
-    def __init__(self, observation: AircraftObservation, factory, minimum_altitude):
+    def __init__(
+        self,
+        observation: AircraftObservation,
+        factory,
+        minimum_altitude,
+        predictor=DEFAULT_PREDICTOR,
+    ):
         self.observation = observation
         self._factory = factory
         self._minimum_altitude = minimum_altitude
+        self._predictor = predictor
 
     def execute(self, tracker):
         observation = self.observation
@@ -54,6 +67,12 @@ class UpdateAircraftCommand(Command):
             existing = tracker.aircrafts.get(observation.callsign)
 
             if existing is not None:
+                snapshot = (
+                    self._predictor.snapshot(existing)
+                    if observation.timestamp > existing.timestamp
+                    else None
+                )
+
                 existing.update_info(
                     observation.longitude,
                     observation.latitude,
@@ -63,8 +82,22 @@ class UpdateAircraftCommand(Command):
                     observation.velocity,
                     new_on_ground=observation.on_ground,
                 )
+
+                tracker.notify_aircraft_updated(
+                    existing,
+                    self._score(snapshot) if snapshot is not None else None,
+                )
             elif is_trackable(observation, self._minimum_altitude):
                 tracker.add_aircraft(self._factory.create(observation))
+
+
+    def _score(self, snapshot):
+        return self._predictor.evaluate(
+            snapshot,
+            actual_timestamp=self.observation.timestamp,
+            actual_longitude=self.observation.longitude,
+            actual_latitude=self.observation.latitude,
+        )
 
 
 class RemoveMissingAircraftCommand(Command):
@@ -92,7 +125,7 @@ class RemoveMissingAircraftCommand(Command):
 
             for callsign in missing_callsigns:
                 if self._is_expired(tracker.aircrafts[callsign]):
-                    tracker.remove_aircraft(callsign)
+                    tracker.remove_aircraft(callsign, reason="missing")
 
     def _is_expired(self, aircraft):
         if self.current_time is None or self.grace_seconds <= 0:
@@ -109,14 +142,18 @@ class RemoveLowAltitudeAircraftCommand(Command):
 
     def execute(self, tracker):
         with tracker.lock:
-            low_altitude_callsigns = [
-                callsign
+            low_altitude = [
+                (callsign, aircraft)
                 for callsign, aircraft in tracker.aircrafts.items()
                 if self._is_low(aircraft)
             ]
 
-            for callsign in low_altitude_callsigns:
-                tracker.remove_aircraft(callsign)
+            for callsign, aircraft in low_altitude:
+                reason = (
+                    "landed" if getattr(aircraft, "on_ground", False)
+                    else "low_altitude"
+                )
+                tracker.remove_aircraft(callsign, reason=reason)
 
     def _is_low(self, aircraft):
         if getattr(aircraft, "on_ground", False):

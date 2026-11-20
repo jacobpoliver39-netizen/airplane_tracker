@@ -13,6 +13,11 @@ from ranking_strategies import RANKING_STRATEGIES, FastestApproachStrategy
 
 
 class FakeAircraft:
+    """
+    Just the state the endpoint and the real TrajectoryPredictor read.
+    With no location history there is no curved prediction.
+    """
+
     def __init__(self, callsign, distance, approach_speed):
         self.callsign = callsign
         self.latitude = 42.0
@@ -23,27 +28,15 @@ class FakeAircraft:
         self.distance_from_user = distance
         self.approach_speed = approach_speed
         self.timestamp = 1000
+        self.user_longitude = 23.0
+        self.user_latitude = 40.6
+        self.location_history = {}
 
     def get_distance_from_user(self):
         return self.distance_from_user
 
     def get_approach_speed_towards_user(self):
         return self.approach_speed
-
-    def get_nearest_distance_from_user(self):
-        return self.distance_from_user
-
-    def get_nearest_distance_time(self):
-        return 60.0
-
-    def get_curved_nearest_approach(self):
-        return None
-
-    def get_curved_trajectory(self, sample_interval_seconds=5):
-        return None
-
-    def get_straight_trajectory(self, sample_interval_seconds=5):
-        return [[self.latitude, self.longitude], [self.latitude, self.longitude + 0.1]]
 
 
 def make_tracker():
@@ -88,8 +81,8 @@ def test_aircraft_endpoint_uses_selected_ranking_strategy(monkeypatch):
     [
         ("nearest", ["NEAR_SLOW", "FAR_FAST"]),
         ("fastest", ["FAR_FAST", "NEAR_SLOW"]),
-        # FakeAircraft has no curved prediction, so this uses the
-        # straight-line nearest distance (5 vs 30 miles).
+        # Both fakes share a position, so their predicted approach ties
+        # and the current distance (5 vs 30 miles) decides.
         ("predicted", ["NEAR_SLOW", "FAR_FAST"]),
     ],
 )
@@ -312,3 +305,59 @@ def test_source_errors_map_to_status_codes(monkeypatch, error, status):
     )
 
     assert response.status_code == status
+
+
+# --- observer endpoints ----------------------------------------------------
+
+from tracker_observers import attach_default_observers
+
+
+class StatsPollingService(FakePollingService):
+    def status(self):
+        return {
+            "mode": "replay", "recording": "a.jsonl", "speed": 5.0,
+            "progress": {"position_seconds": 1.0}, "clock": {"now": 1.0, "speed": 5.0},
+        }
+
+    def worker_status(self):
+        return {"running": True, "queue_depth": 0, "processed": 7, "failed": 0}
+
+
+@pytest.fixture
+def observed_tracker(monkeypatch):
+    tracker = AircraftTracker()
+    fences = [{"name": "Here", "longitude": 23.0, "latitude": 40.6, "radius_miles": 5}]
+    monkeypatch.setattr(api, "observers", attach_default_observers(tracker, fences))
+    monkeypatch.setattr(api, "polling_service", StatsPollingService())
+    return tracker
+
+
+def test_stats_endpoint_combines_observers_queue_and_source(observed_tracker):
+    observed_tracker.add_aircraft(
+        Aircraft("NEARBY", 1000, 23.01, 40.6, 10000, 90.0, "Test", 300.0, 23.0, 40.6)
+    )
+
+    stats = TestClient(api.app).get("/stats").json()
+
+    assert stats["tracker"]["tracked"] == 1
+    assert stats["queue"]["processed"] == 7
+    assert stats["source"] == {
+        "mode": "replay", "recording": "a.jsonl", "speed": 5.0,
+        "progress": {"position_seconds": 1.0},
+    }
+    assert set(stats["prediction_accuracy"]["segments"]) == {"all", "turning", "straight"}
+
+
+def test_events_and_geofences_endpoints(observed_tracker):
+    observed_tracker.add_aircraft(
+        Aircraft("NEARBY", 1000, 23.01, 40.6, 10000, 90.0, "Test", 300.0, 23.0, 40.6)
+    )
+    client = TestClient(api.app)
+
+    events = client.get("/events").json()
+    fences = client.get("/geofences").json()
+
+    assert [(e["type"], e["callsign"]) for e in events] == [("geofence_enter", "NEARBY")]
+    assert fences[0]["name"] == "Here"
+    assert fences[0]["aircraft_inside"] == ["NEARBY"]
+    assert client.get("/events", params={"limit": 0}).status_code == 422

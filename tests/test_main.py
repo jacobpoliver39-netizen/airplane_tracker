@@ -258,3 +258,21 @@ def test_wait_first_waits_before_the_first_poll():
     # One wait before the poll, one after it.
     assert stop_event.waits == [config.POLL_INTERVAL_SECONDS] * 2
     assert client.calls == 1
+
+
+def test_main_leaves_an_injected_executor_running():
+    from command_queue import TrackerWorker
+
+    tracker = AircraftTracker()
+    worker = TrackerWorker(tracker).start()
+    stop_event = RecordingEvent()
+    client = FakeClient([(1000, [make_state()])], stop_event)
+
+    try:
+        main.main(stop_event, client=client, tracker=tracker, executor=worker)
+        worker.wait_until_idle()
+
+        assert worker.is_running
+        assert set(tracker.aircrafts) == {"TEST123"}
+    finally:
+        worker.stop()

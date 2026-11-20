@@ -158,13 +158,18 @@ class FakeAircraftWithPrediction:
     def get_distance_from_user(self):
         return self.distance
 
-    def get_nearest_distance_from_user(self):
-        return self.straight_nearest
 
-    def get_curved_nearest_approach(self):
-        if self.curved_nearest is None:
-            return None
-        return (self.curved_nearest, 30.0)
+class FakePredictor:
+    """Returns the nearest approaches stored on FakeAircraftWithPrediction."""
+
+    def nearest_approach(self, aircraft, strategy):
+        from prediction_strategies import NearestApproach
+
+        distance = (
+            aircraft.curved_nearest if strategy == "curved"
+            else aircraft.straight_nearest
+        )
+        return None if distance is None else NearestApproach(distance, 30.0)
 
 
 def test_predicted_approach_strategy_ranks_closest_predicted_pass_first():
@@ -178,7 +183,7 @@ def test_predicted_approach_strategy_ranks_closest_predicted_pass_first():
         "MID_PASSING": FakeAircraftWithPrediction("MID_PASSING", 10.0, 3.0, None),
     }
 
-    ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
+    ranked = NearestPredictedApproachStrategy(FakePredictor()).sort_aircrafts(aircrafts)
 
     assert list(ranked) == ["FAR_OVERHEAD", "MID_PASSING", "NEAR_LEAVING"]
 
@@ -192,7 +197,7 @@ def test_predicted_approach_strategy_prefers_curved_over_straight():
         "STRAIGHT": FakeAircraftWithPrediction("STRAIGHT", 10.0, 4.0, None),
     }
 
-    ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
+    ranked = NearestPredictedApproachStrategy(FakePredictor()).sort_aircrafts(aircrafts)
 
     assert list(ranked) == ["STRAIGHT", "TURNING_AWAY"]
 
@@ -205,7 +210,7 @@ def test_predicted_approach_strategy_breaks_ties_by_current_distance():
         "NEAR": FakeAircraftWithPrediction("NEAR", 10.0, 2.0, None),
     }
 
-    ranked = NearestPredictedApproachStrategy().sort_aircrafts(aircrafts)
+    ranked = NearestPredictedApproachStrategy(FakePredictor()).sort_aircrafts(aircrafts)
 
     assert list(ranked) == ["NEAR", "FAR"]
 

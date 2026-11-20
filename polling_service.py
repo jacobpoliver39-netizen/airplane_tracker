@@ -3,9 +3,10 @@ Runs the polling loop in the background and lets the API switch its
 data source while the server is running: live OpenSky, or a replay of
 a recording at an adjustable speed.
 
-Each switch stops the polling thread (whose TrackerWorker applies
-anything still queued), swaps or adjusts the client, and starts the
-loop again. Changing the source clears the tracker; changing the
+The service owns one TrackerWorker for its whole life, so its counters
+(queue depth, commands processed/failed) cover every source. Each
+switch stops the polling thread, waits for the worker to apply anything
+still queued, swaps or adjusts the client, and starts the loop again. Changing the source clears the tracker; changing the
 replay speed keeps it and resumes from the same point.
 """
 
@@ -16,6 +17,7 @@ from pathlib import Path
 
 import config
 import main
+from command_queue import TrackerWorker
 from flight_recording import convert_csv_to_recording
 from opensky_client import OpenSkyClient
 from replay_client import ReplayOpenSkyClient
@@ -64,12 +66,15 @@ class PollingService:
         self._recording_name = None  # None while live
         self._thread = None
         self._stop_event = None
+        self._worker = None
 
     # --- lifecycle -------------------------------------------------------
 
     def start(self):
         """Start with the source from config (JACOBSKY_REPLAY or live)."""
         with self._lock:
+            self._worker = TrackerWorker(self._tracker).start()
+
             if config.REPLAY_FILE:
                 client = self._replay_client_factory(
                     config.REPLAY_FILE,
@@ -86,6 +91,10 @@ class PollingService:
     def stop(self):
         with self._lock:
             self._stop_thread()
+
+            if self._worker is not None:
+                self._worker.stop()
+                self._worker = None
 
             if self._client is not None:
                 self._client.close()
@@ -138,6 +147,19 @@ class PollingService:
         return self.status()
 
     # --- queries ---------------------------------------------------------
+
+    def worker_status(self):
+        worker = self._worker
+
+        if worker is None:
+            return {"running": False, "queue_depth": 0, "processed": 0, "failed": 0}
+
+        return {
+            "running": worker.is_running,
+            "queue_depth": worker.queue_depth,
+            "processed": worker.processed_count,
+            "failed": worker.failed_count,
+        }
 
     @property
     def is_replaying(self):
@@ -232,6 +254,7 @@ class PollingService:
                 "client": self._client,
                 "tracker": self._tracker,
                 "wait_first": wait_first,
+                "executor": self._worker,
             },
             name="polling",
             daemon=True,
@@ -254,6 +277,11 @@ class PollingService:
 
         self._thread = None
         self._stop_event = None
+
+        # Apply what the old loop queued before the caller clears the
+        # tracker or switches source.
+        if self._worker is not None:
+            self._worker.wait_until_idle()
 
 
 def _check_speed(speed):

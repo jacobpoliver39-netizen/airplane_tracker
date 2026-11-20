@@ -2,7 +2,7 @@
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -15,11 +15,17 @@ from polling_service import (
     SourceBusyError,
 )
 from ranking_strategies import RANKING_STRATEGIES
+from tracker_observers import attach_default_observers
+from trajectory_predictor import DEFAULT_PREDICTOR
 from tracker_state import aircraft_tracker
 
 
 # Owns the polling thread and the current data source (live or replay).
 polling_service = PollingService(aircraft_tracker)
+
+# Statistics, prediction accuracy, geofences and closest-approach alerts,
+# all fed by tracker events rather than by polling the tracker.
+observers = attach_default_observers(aircraft_tracker)
 
 
 @asynccontextmanager
@@ -58,8 +64,14 @@ def _round_or_none(value, digits=2):
     return None if value is None else round(value, digits)
 
 
-def serialize_aircraft(plane):
-    curved_approach = plane.get_curved_nearest_approach()
+def serialize_aircraft(plane, predictor=DEFAULT_PREDICTOR):
+    straight_approach = predictor.nearest_approach(plane, "straight")
+    curved_approach = predictor.nearest_approach(plane, "curved")
+
+    if straight_approach is None:
+        straight_distance, straight_time = None, None
+    else:
+        straight_distance, straight_time = straight_approach
 
     if curved_approach is None:
         curved_distance, curved_time = None, None
@@ -75,10 +87,8 @@ def serialize_aircraft(plane):
         "speed": plane.velocity,
         "heading": plane.heading,
         "distance": _round_or_none(plane.distance_from_user),
-        "nearest_distance": _round_or_none(
-            plane.get_nearest_distance_from_user()
-        ),
-        "nearest_distance_time": plane.get_nearest_distance_time(),
+        "nearest_distance": _round_or_none(straight_distance),
+        "nearest_distance_time": straight_time,
         "curved_nearest_distance": _round_or_none(curved_distance),
         "curved_nearest_distance_time": curved_time,
         # Position time (Unix seconds). Trajectory points start at this
@@ -86,11 +96,11 @@ def serialize_aircraft(plane):
         # frontend animate each aircraft along its predicted path.
         "timestamp": plane.timestamp,
         "trajectory_step_seconds": TRAJECTORY_STEP_SECONDS,
-        "straight_trajectory": plane.get_straight_trajectory(
-            sample_interval_seconds=TRAJECTORY_STEP_SECONDS
+        "straight_trajectory": predictor.trajectory(
+            plane, "straight", sample_interval_seconds=TRAJECTORY_STEP_SECONDS
         ),
-        "curved_trajectory": plane.get_curved_trajectory(
-            sample_interval_seconds=TRAJECTORY_STEP_SECONDS
+        "curved_trajectory": predictor.trajectory(
+            plane, "curved", sample_interval_seconds=TRAJECTORY_STEP_SECONDS
         ),
     }
 
@@ -169,3 +179,34 @@ def _switch(action, *args, **kwargs):
     except ValueError as error:
         # Bad speed, speed change while live, or an unreadable recording.
         raise HTTPException(status_code=400, detail=str(error))
+
+
+# --- observers: statistics, accuracy and alerts ------------------------------
+
+@app.get("/stats")
+def get_stats():
+    """Tracker statistics, command queue health and the data source."""
+    source = polling_service.status()
+
+    return {
+        "tracker": observers.statistics.summary(),
+        "queue": polling_service.worker_status(),
+        "source": {
+            "mode": source["mode"],
+            "recording": source["recording"],
+            "speed": source["speed"],
+            "progress": source["progress"],
+        },
+        "prediction_accuracy": observers.accuracy.summary(),
+    }
+
+
+@app.get("/events")
+def get_events(limit: int = Query(default=50, ge=1, le=200)):
+    """Recent geofence and closest-approach events, newest first."""
+    return observers.events.recent(limit)
+
+
+@app.get("/geofences")
+def get_geofences():
+    return [fence.summary() for fence in observers.geofences]
