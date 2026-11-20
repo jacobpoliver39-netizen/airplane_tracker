@@ -1,16 +1,35 @@
+import json
+
 import pytest
 
 from opensky_client import OpenSkyClient, OpenSkyRateLimitError
 
 
 class FakeResponse:
-    def __init__(self, status_code=200, payload=None, headers=None):
+    """
+    A requests.Response stand-in. The body is `payload` as JSON, or raw
+    `body` bytes, served in chunks like a streamed response.
+    """
+
+    def __init__(self, status_code=200, payload=None, headers=None, body=None):
         self.status_code = status_code
         self._payload = payload
+        self._body = body if body is not None else json.dumps(payload).encode()
         self.headers = headers or {}
+        self.bytes_served = 0
+        self.closed = False
 
     def json(self):
         return self._payload
+
+    def iter_content(self, chunk_size=1):
+        for start in range(0, len(self._body), chunk_size):
+            chunk = self._body[start:start + chunk_size]
+            self.bytes_served += len(chunk)
+            yield chunk
+
+    def close(self):
+        self.closed = True
 
     def raise_for_status(self):
         if self.status_code >= 400:
@@ -25,7 +44,7 @@ class FakeSession:
         self.get_calls = []
         self.post_calls = 0
 
-    def get(self, url, params=None, headers=None, timeout=None):
+    def get(self, url, params=None, headers=None, timeout=None, stream=False):
         self.get_calls.append(headers or {})
         return self._get_responses.pop(0)
 
@@ -114,3 +133,52 @@ def test_expired_token_is_refreshed_once_on_401():
 
     assert client.get_states() == (1, [])
     assert session.get_calls[-1]["Authorization"] == "Bearer new"
+
+
+# --- response size cap ------------------------------------------------------
+
+def anonymous_client(response, limit=1000):
+    return OpenSkyClient(
+        session=FakeSession([response]),
+        client_id=None,
+        client_secret=None,
+        max_response_bytes=limit,
+    )
+
+
+def test_response_within_size_limit_is_parsed():
+    response = FakeResponse(payload={"time": 1000, "states": []})
+
+    assert anonymous_client(response).get_states() == (1000, [])
+    assert response.closed
+
+
+def test_oversized_body_is_refused_without_reading_it_all():
+    big = b'{"time": 1000, "states": [' + b'0,' * 1_000_000 + b'0]}'
+    response = FakeResponse(body=big)
+
+    with pytest.raises(ValueError, match="exceeds"):
+        anonymous_client(response, limit=100_000).get_states()
+
+    # Stopped at the first chunk past the limit, not after 2 MB.
+    assert response.bytes_served <= 100_000 + 64 * 1024
+    assert response.closed
+
+
+def test_declared_oversized_body_is_refused_before_reading():
+    response = FakeResponse(
+        payload={"time": 1000, "states": []},
+        headers={"Content-Length": str(50_000_000)},
+    )
+
+    with pytest.raises(ValueError, match="limit"):
+        anonymous_client(response).get_states()
+
+    assert response.bytes_served == 0
+
+
+def test_default_limit_is_ten_megabytes():
+    import config
+
+    assert config.MAX_RESPONSE_BYTES == 10 * 1024 * 1024
+    assert OpenSkyClient(session=FakeSession([]))._max_response_bytes == config.MAX_RESPONSE_BYTES

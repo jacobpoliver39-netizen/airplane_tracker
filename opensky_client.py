@@ -1,5 +1,6 @@
 """Small client for the OpenSky /states/all endpoint."""
 
+import json
 import logging
 import time
 
@@ -32,11 +33,13 @@ class OpenSkyClient:
         client_id=config.OPENSKY_CLIENT_ID,
         client_secret=config.OPENSKY_CLIENT_SECRET,
         timeout=config.REQUEST_TIMEOUT_SECONDS,
+        max_response_bytes=config.MAX_RESPONSE_BYTES,
     ):
         self._session = session if session is not None else requests.Session()
         self._client_id = client_id
         self._client_secret = client_secret
         self._timeout = timeout
+        self._max_response_bytes = max_response_bytes
         self._token = None
         self._token_expires_at = 0.0
 
@@ -56,13 +59,14 @@ class OpenSkyClient:
 
         states is a list of raw state arrays, or None when OpenSky has no
         aircraft in the area. Raises requests.RequestException,
-        ValueError for an unexpected response shape, or
-        OpenSkyRateLimitError.
+        ValueError for an unexpected response shape or a body larger
+        than max_response_bytes, or OpenSkyRateLimitError.
         """
         response = self._request_states(bounding_box)
 
         # A 401 means the token expired early; refresh once and retry.
         if response.status_code == 401 and self.authenticated:
+            response.close()
             self._token = None
             response = self._request_states(bounding_box)
 
@@ -74,10 +78,14 @@ class OpenSkyClient:
                 retry_after = int(retry_after)
             except (TypeError, ValueError):
                 retry_after = None
+            response.close()
             raise OpenSkyRateLimitError(retry_after)
 
-        response.raise_for_status()
-        data = response.json()
+        try:
+            response.raise_for_status()
+            data = self._read_json(response)
+        finally:
+            response.close()
 
         if not isinstance(data, dict) or "states" not in data:
             raise ValueError("Unexpected OpenSky response structure")
@@ -95,12 +103,38 @@ class OpenSkyClient:
         if self.authenticated:
             headers["Authorization"] = f"Bearer {self._get_token()}"
 
+        # Streamed, so the body is only read through _read_json's cap.
         return self._session.get(
             config.OPENSKY_STATES_URL,
             params=bounding_box,
             headers=headers,
             timeout=self._timeout,
+            stream=True,
         )
+
+    def _read_json(self, response):
+        """
+        Parse the body as JSON, refusing to read more than
+        max_response_bytes. The limit applies to the decompressed body,
+        so a small gzip response that expands enormously is refused too.
+        """
+        limit = self._max_response_bytes
+        declared = response.headers.get("Content-Length")
+
+        if declared is not None and declared.isdigit() and int(declared) > limit:
+            raise ValueError(
+                f"OpenSky response is {int(declared):,} bytes; limit is {limit:,}"
+            )
+
+        body = bytearray()
+
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            body += chunk
+
+            if len(body) > limit:
+                raise ValueError(f"OpenSky response exceeds {limit:,} bytes")
+
+        return json.loads(body)
 
     def _get_token(self):
         # Refresh a minute early so a request never carries an

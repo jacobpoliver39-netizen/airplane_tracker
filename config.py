@@ -38,6 +38,10 @@ POLL_INTERVAL_SECONDS = int(
 
 REQUEST_TIMEOUT_SECONDS = 20
 
+# Larger OpenSky responses are rejected unread (the poll is skipped).
+# A normal response for this area is well under 1 MB.
+MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
 # An aircraft missing from a response is kept until its last position
 # report is older than this, so one missed poll does not drop it.
 MISSING_AIRCRAFT_GRACE_SECONDS = POLL_INTERVAL_SECONDS + 30

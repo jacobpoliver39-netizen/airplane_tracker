@@ -46,6 +46,9 @@ function App() {
   const [altitudeFilter, setAltitudeFilter] = useState("all");
   const [rank, setRank] = useState<RankOption>("nearest");
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  // Aircraft tracked by the server; more than `aircraft.length` when the
+  // API's per-response cap (1,000) left some out.
+  const [trackedTotal, setTrackedTotal] = useState(0);
   // Kept across rank changes so a failed request after switching
   // shows "stale" rather than "offline".
   const hasData = useRef(false);
@@ -92,9 +95,12 @@ function App() {
           throw new Error("API returned an unexpected response");
         }
 
+        const total = Number(response.headers.get("X-Total-Aircraft"));
+
         if (isMounted) {
           hasData.current = true;
           setAircraft(data as Aircraft[]);
+          setTrackedTotal(Number.isFinite(total) ? total : data.length);
           setConnectionStatus("live");
         }
       } catch (error) {
@@ -310,6 +316,12 @@ function App() {
 
         <div className="results-summary">
           Showing {filteredAircraft.length} of {aircraft.length} aircraft
+          {trackedTotal > aircraft.length && (
+            <span className="results-capped">
+              {" "}· {trackedTotal.toLocaleString()} tracked; only the top{" "}
+              {aircraft.length.toLocaleString()} by the current sort are sent
+            </span>
+          )}
         </div>
 
         <div className="surveillance-layout">

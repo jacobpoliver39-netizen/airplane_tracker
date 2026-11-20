@@ -1111,3 +1111,7 @@
   letter-spacing: 0.08em;
   vertical-align: middle;
 }
+
+.results-capped {
+  color: #fbbf24;
+}

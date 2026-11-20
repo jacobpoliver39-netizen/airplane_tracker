@@ -321,3 +321,17 @@ def test_newer_and_same_time_reports_are_applied():
 
     assert aircraft.update_info(23.2, 40.7, 1015, 9000, 90.0, 300.0) is True
     assert aircraft.timestamp == 1015
+
+
+def test_history_keeps_only_the_most_recent_positions():
+    from aircraft import MAX_HISTORY_POSITIONS
+
+    aircraft = make_simple_aircraft(timestamp=0)
+
+    for step in range(1, MAX_HISTORY_POSITIONS + 50):
+        aircraft.update_info(23.1 + step * 0.001, 40.7, step * 15, 10000, 90.0, 300.0)
+
+    timestamps = sorted(aircraft.location_history)
+    assert len(timestamps) == MAX_HISTORY_POSITIONS == 150
+    assert timestamps[-1] == aircraft.timestamp
+    assert timestamps[0] == (49 + 1) * 15  # the 50 oldest were dropped

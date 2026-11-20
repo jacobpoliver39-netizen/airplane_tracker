@@ -11,7 +11,15 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -92,6 +100,8 @@ def create_app(services=None):
         ],
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
+        # Lets the dashboard read how many aircraft exist beyond the cap.
+        expose_headers=["X-Total-Aircraft"],
     )
     app.include_router(router)
     return app
@@ -103,6 +113,10 @@ def root():
 
 
 TRAJECTORY_STEP_SECONDS = 5
+
+# Most aircraft one /aircraft response returns, so a crowded sky cannot
+# overload the browser. The top ones by the selected ranking are kept.
+MAX_AIRCRAFT_PER_RESPONSE = 1000
 
 
 def _round_or_none(value, digits=2):
@@ -154,12 +168,18 @@ def serialize_aircraft(plane, predictor=DEFAULT_PREDICTOR):
 
 @router.get("/aircraft")
 def get_aircraft(
+    response: Response,
     rank: Literal["nearest", "fastest", "predicted"] | None = None,
+    limit: int = Query(
+        default=MAX_AIRCRAFT_PER_RESPONSE, ge=1, le=MAX_AIRCRAFT_PER_RESPONSE
+    ),
     services: AppServices = Services,
 ):
     """
-    Return tracked aircraft ranked by `rank` (a RANKING_STRATEGIES key).
-    Without `rank`, the tracker's default strategy is used.
+    Return up to `limit` tracked aircraft (at most
+    MAX_AIRCRAFT_PER_RESPONSE), ranked by `rank` (a RANKING_STRATEGIES
+    key; without it, the tracker's default strategy). The
+    X-Total-Aircraft header gives how many are tracked in total.
     """
     strategy = RANKING_STRATEGIES[rank] if rank is not None else None
     tracker = services.tracker
@@ -167,10 +187,9 @@ def get_aircraft(
     # Hold the tracker lock so the worker thread cannot change an
     # aircraft's history while it is being read.
     with tracker.lock:
-        return [
-            serialize_aircraft(plane)
-            for plane in tracker.get_sorted_aircrafts(strategy).values()
-        ]
+        ranked = list(tracker.get_sorted_aircrafts(strategy).values())
+        response.headers["X-Total-Aircraft"] = str(len(ranked))
+        return [serialize_aircraft(plane) for plane in ranked[:limit]]
 
 
 # --- data source: live or replay -------------------------------------------

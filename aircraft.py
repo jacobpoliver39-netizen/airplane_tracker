@@ -5,6 +5,11 @@ from calculator import Calculator
 
 logger = logging.getLogger(__name__)
 
+# Positions kept per aircraft; older ones are dropped. Predictions use
+# only the last few; 150 is about 37 minutes at a 15 s poll interval.
+MAX_HISTORY_POSITIONS = 150
+
+
 class Aircraft:
     """
     One tracked aircraft: its current state, its position history, and
@@ -74,6 +79,10 @@ class Aircraft:
         if self.timestamp not in self.location_history:
             self.location_history[self.timestamp] = Position(self.longitude, self.latitude, self.distance_from_user, self.heading, self.bearing_from_user)
             logger.debug("Location history updated: %s", self.callsign)
+
+            # Keep only the most recent MAX_HISTORY_POSITIONS.
+            while len(self.location_history) > MAX_HISTORY_POSITIONS:
+                del self.location_history[min(self.location_history)]
 
     def get_distance_from_user(self):
         distance_from_user =  Calculator.calculate_haversine_distance(self.user_longitude, self.user_latitude, self.longitude, self.latitude)

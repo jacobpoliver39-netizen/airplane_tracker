@@ -450,3 +450,43 @@ def test_no_module_level_tracker():
 
     assert not hasattr(api, "aircraft_tracker")
     assert not hasattr(main, "aircraft_tracker")
+
+
+# --- response cap ----------------------------------------------------------
+
+def crowded_tracker(count):
+    tracker = AircraftTracker()
+    for index in range(count):
+        tracker.add_aircraft(FakeAircraft(f"P{index:04d}", float(index), 0.0))
+    return tracker
+
+
+def test_aircraft_response_is_capped_and_reports_the_total():
+    app = make_app(tracker=crowded_tracker(api.MAX_AIRCRAFT_PER_RESPONSE + 5))
+
+    response = TestClient(app).get("/aircraft")
+
+    assert api.MAX_AIRCRAFT_PER_RESPONSE == 1000
+    assert len(response.json()) == 1000
+    assert response.headers["X-Total-Aircraft"] == "1005"
+    # The nearest are kept (FakeAircraft distance = its index).
+    assert response.json()[-1]["callsign"] == "P0999"
+
+
+def test_limit_parameter_and_its_bounds():
+    client = TestClient(make_app(tracker=crowded_tracker(10)))
+
+    response = client.get("/aircraft", params={"limit": 3})
+    assert [p["callsign"] for p in response.json()] == ["P0000", "P0001", "P0002"]
+    assert response.headers["X-Total-Aircraft"] == "10"
+
+    assert client.get("/aircraft", params={"limit": 0}).status_code == 422
+    assert client.get("/aircraft", params={"limit": 1001}).status_code == 422
+
+
+def test_total_header_is_readable_by_the_dashboard():
+    response = TestClient(make_app()).get(
+        "/aircraft", headers={"Origin": "http://localhost:5173"}
+    )
+
+    assert "x-total-aircraft" in response.headers["access-control-expose-headers"].lower()
