@@ -1,5 +1,6 @@
 import logging
 
+from aircraft_state import AircraftLifecycle, AircraftRemovedError
 from calculator import Calculator
 
 logger = logging.getLogger(__name__)
@@ -9,6 +10,9 @@ class Aircraft:
     One tracked aircraft: its current state, its position history, and
     values measured from them (distance, bearing, approach speed).
 
+    `lifecycle` tracks whether it is observed, missing or removed
+    (aircraft_state.py). A removed aircraft refuses further updates.
+
     Predictions (trajectories, nearest approach, accuracy scoring) live
     in trajectory_predictor.TrajectoryPredictor, and accuracy scores are
     collected by tracker_observers.PredictionAccuracyObserver.
@@ -16,6 +20,7 @@ class Aircraft:
 
     def __init__(self, callsign, timestamp, longitude, latitude, altitude, heading, country_of_origin, velocity, user_longitude, user_latitude, on_ground=False):
         self.callsign = callsign
+        self.lifecycle = AircraftLifecycle(callsign)
         self.on_ground = on_ground
         self.timestamp = timestamp
         self.longitude = longitude
@@ -34,6 +39,24 @@ class Aircraft:
         self.update_location_history()
 
     def update_info(self, new_longitude, new_latitude, new_timestamp, new_altitude, new_heading, new_velocity, new_on_ground=False):
+        """
+        Apply a position report. Returns False, changing nothing, when the
+        report is older than the current position: state never goes back
+        in time. A report with the same timestamp is applied (OpenSky can
+        update other fields without a new position).
+        """
+        if not self.lifecycle.state.accepts_updates:
+            raise AircraftRemovedError(
+                f"{self.callsign} was removed and cannot be updated"
+            )
+
+        if new_timestamp < self.timestamp:
+            logger.debug(
+                "%s: ignored report from %s, older than current %s",
+                self.callsign, new_timestamp, self.timestamp,
+            )
+            return False
+
         self.longitude = new_longitude
         self.latitude = new_latitude
         self.timestamp = new_timestamp
@@ -45,6 +68,7 @@ class Aircraft:
         self.bearing_from_user = self.get_bearing_from_user_to_plane()
         self.update_location_history()
         logger.debug("Aircraft information updated: %s", self.callsign)
+        return True
 
     def update_location_history(self):
         if self.timestamp not in self.location_history:

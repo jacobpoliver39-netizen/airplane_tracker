@@ -37,7 +37,16 @@ export default function AircraftDetails({
           <h3>{aircraft.callsign}</h3>
         </div>
 
-        <span className="details-status">TRACKED</span>
+        {aircraft.state === "missing" ? (
+          <span
+            className="details-status details-status--missing"
+            title="Not in the latest updates; removed if it stays missing past the grace period"
+          >
+            MISSING
+          </span>
+        ) : (
+          <span className="details-status">TRACKED</span>
+        )}
       </div>
 
       <div className="details-section">

@@ -293,3 +293,31 @@ def test_approach_speed_is_negative_when_aircraft_moves_away():
     aircraft.distance_from_user = 2.0
 
     assert aircraft.get_approach_speed_towards_user() == -240.0
+
+
+# --- reports never move an aircraft back in time ---------------------------
+
+def make_simple_aircraft(timestamp=1000):
+    return Aircraft("ORDER", timestamp, 23.1, 40.7, 10000, 90.0, "Test", 300.0, 23.0, 40.6)
+
+
+def test_older_report_is_ignored():
+    aircraft = make_simple_aircraft(timestamp=1000)
+
+    applied = aircraft.update_info(22.0, 40.0, 990, 5000, 180.0, 100.0)
+
+    assert applied is False
+    assert aircraft.timestamp == 1000
+    assert (aircraft.longitude, aircraft.latitude) == (23.1, 40.7)
+    assert (aircraft.altitude, aircraft.heading, aircraft.velocity) == (10000, 90.0, 300.0)
+    assert list(aircraft.location_history) == [1000]
+
+
+def test_newer_and_same_time_reports_are_applied():
+    aircraft = make_simple_aircraft(timestamp=1000)
+
+    assert aircraft.update_info(23.1, 40.7, 1000, 9000, 90.0, 300.0) is True
+    assert aircraft.altitude == 9000
+
+    assert aircraft.update_info(23.2, 40.7, 1015, 9000, 90.0, 300.0) is True
+    assert aircraft.timestamp == 1015

@@ -40,7 +40,14 @@ export default function AircraftList({
             onClick={() => onSelectAircraft(plane.id)}
           >
             <div className="aircraft-card-top">
-              <span className="aircraft-callsign">{plane.callsign}</span>
+              <span className="aircraft-callsign">
+                {plane.callsign}
+                {plane.state === "missing" && (
+                  <span className="state-tag" title="Not in the latest updates">
+                    MISSING
+                  </span>
+                )}
+              </span>
               <span className="aircraft-heading">
                 {formatHeading(plane.heading)}
               </span>

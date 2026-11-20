@@ -1,10 +1,12 @@
 import logging
+import math
 import time
 
 import requests
 
 import config
 from aircraft_factory import AircraftFactory
+from aircraft_tracker import AircraftTracker
 from command_queue import TrackerWorker
 from commands import (
     CommandBatch,
@@ -15,7 +17,6 @@ from commands import (
 from logging_service import LoggingService
 from opensky_adapter import OpenSkyAdapter
 from opensky_client import OpenSkyClient, OpenSkyRateLimitError
-from tracker_state import aircraft_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -25,18 +26,39 @@ default_adapter = OpenSkyAdapter()
 default_factory = AircraftFactory(config.USER_LONGITUDE, config.USER_LATITUDE)
 
 
-def build_poll_commands(states, response_time, adapter=None, factory=None):
+def _valid_time(value):
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def build_poll_commands(
+    states, response_time, adapter=None, factory=None, clock=time.time
+):
     """
     Turn one validated OpenSky response into the commands that apply it.
 
     Returns (batch, observed_count). The batch holds one
     UpdateAircraftCommand per valid state, then the missing-aircraft and
     low-altitude removals. Nothing touches the tracker here.
+
+    A response without a usable time uses the local clock instead.
+    Without a time, the missing-aircraft check would treat every missing
+    aircraft as expired and skip the grace period.
     """
     adapter = adapter if adapter is not None else default_adapter
     factory = factory if factory is not None else default_factory
 
-    observations = adapter.to_observations(states)
+    if not _valid_time(response_time):
+        logger.warning(
+            "OpenSky response has no valid time (%r); using the local clock",
+            response_time,
+        )
+        response_time = clock()
+
+    observations = adapter.to_observations(states, response_time=response_time)
     observed_callsigns = {observation.callsign for observation in observations}
 
     commands = [
@@ -107,7 +129,7 @@ def _wait(stop_event, seconds):
 def main(
     stop_event=None,
     client=None,
-    tracker=aircraft_tracker,
+    tracker=None,
     wait_first=False,
     executor=None,
 ):
@@ -118,12 +140,16 @@ def main(
     wait_first: wait until the client's next poll is due before the
     first poll, used when resuming a replay that was already running.
 
+    tracker: the AircraftTracker to fill; a new one when run on its own
+    (`python main.py`).
+
     executor: where to submit commands. Without one, a TrackerWorker is
     started here and drained when polling stops. One passed in (by
     PollingService) is left running.
     """
     LoggingService.initialize()
 
+    tracker = tracker if tracker is not None else AircraftTracker()
     owns_client = client is None
     client = client if client is not None else _create_client()
 

@@ -5,9 +5,24 @@ import type { Aircraft } from "./types/aircraft";
 import "./App.css";
 import AircraftDetails from "./components/AircraftDetails";
 import ReplayControls from "./components/ReplayControls";
-import { API_BASE_URL, POLL_INTERVAL_MS, REPLAY_POLL_INTERVAL_MS } from "./config";
+import PredictionAccuracyPanel from "./components/PredictionAccuracyPanel";
+import EventFeed from "./components/EventFeed";
+import {
+  API_BASE_URL,
+  INSIGHTS_POLL_INTERVAL_MS,
+  POLL_INTERVAL_MS,
+  REPLAY_POLL_INTERVAL_MS,
+} from "./config";
 import { syncSimClock } from "./animation/clock";
 import type { SourceStatus } from "./types/source";
+import type {
+  Geofence,
+  PredictionAccuracy,
+  StatsResponse,
+  TrackerEvent,
+} from "./types/observers";
+
+const MAX_EVENTS = 50;
 
 // "stale" = the last request failed but earlier data is still shown.
 type ConnectionStatus = "connecting" | "live" | "stale" | "offline";
@@ -40,6 +55,9 @@ function App() {
   // Bumped after switching source, to refetch straight away.
   const [refreshKey, setRefreshKey] = useState(0);
   const replaying = source?.mode === "replay";
+  const [accuracy, setAccuracy] = useState<PredictionAccuracy | null>(null);
+  const [events, setEvents] = useState<TrackerEvent[]>([]);
+  const [geofences, setGeofences] = useState<Geofence[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -102,6 +120,47 @@ function App() {
     };
     // Refetch immediately when the ranking or the source changes.
   }, [rank, replaying, refreshKey]);
+
+  // Prediction accuracy, events and geofences come from the tracker's
+  // observers. They change slowly, so they are fetched less often than
+  // the aircraft, and again straight after the source changes.
+  useEffect(() => {
+    let isMounted = true;
+
+    const getJson = async <T,>(path: string): Promise<T | null> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}${path}`);
+        return response.ok ? ((await response.json()) as T) : null;
+      } catch {
+        return null; // The status badge already reports connection problems.
+      }
+    };
+
+    const fetchInsights = async () => {
+      const [stats, recentEvents] = await Promise.all([
+        getJson<StatsResponse>("/stats"),
+        getJson<TrackerEvent[]>(`/events?limit=${MAX_EVENTS}`),
+      ]);
+
+      if (!isMounted) return;
+      if (stats) setAccuracy(stats.prediction_accuracy);
+      if (Array.isArray(recentEvents)) setEvents(recentEvents);
+    };
+
+    getJson<Geofence[]>("/geofences").then((fences) => {
+      if (isMounted && Array.isArray(fences)) setGeofences(fences);
+    });
+
+    fetchInsights();
+    const intervalId = setInterval(fetchInsights, INSIGHTS_POLL_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [refreshKey]);
+
+  const trackedIds = new Set(aircraft.map((plane) => plane.id));
 
   const filteredAircraft = aircraft.filter((plane) => {
     const matchesSearch = (plane.callsign ?? "")
@@ -263,6 +322,7 @@ function App() {
           <div className="map-container">
             <AircraftMap
               aircraft={filteredAircraft}
+              geofences={geofences}
               selectedAircraftId={selectedAircraftId}
               onSelectAircraft={setSelectedAircraftId}
             />
@@ -270,6 +330,16 @@ function App() {
         </div>
 
         <AircraftDetails aircraft={selectedAircraft} />
+
+        <div className="insights-layout">
+          <PredictionAccuracyPanel accuracy={accuracy} />
+          <EventFeed
+            events={events}
+            trackedIds={trackedIds}
+            selectedAircraftId={selectedAircraftId}
+            onSelectAircraft={setSelectedAircraftId}
+          />
+        </div>
 
       </section>
 

@@ -11,3 +11,6 @@ export const REPLAY_POLL_INTERVAL_MS = 500;
 
 // Keep in sync with USER_LATITUDE / USER_LONGITUDE in config.py.
 export const USER_POSITION: [number, number] = [40.6, 23.0];
+
+// Prediction accuracy and events change slowly; refresh them less often.
+export const INSIGHTS_POLL_INTERVAL_MS = 2000;

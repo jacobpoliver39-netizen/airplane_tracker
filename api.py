@@ -1,11 +1,21 @@
+"""
+HTTP API for the dashboard.
+
+No module-level tracker: build_services() creates the tracker, the
+polling service and the observers when the app starts, and endpoints
+receive them through FastAPI's dependency injection (Depends). Tests
+pass their own AppServices to create_app().
+"""
 
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from aircraft_tracker import AircraftTracker
 from logging_service import LoggingService
 from polling_service import (
     MAX_REPLAY_SPEED,
@@ -15,46 +25,81 @@ from polling_service import (
     SourceBusyError,
 )
 from ranking_strategies import RANKING_STRATEGIES
-from tracker_observers import attach_default_observers
+from tracker_observers import TrackerObservers, attach_default_observers
 from trajectory_predictor import DEFAULT_PREDICTOR
-from tracker_state import aircraft_tracker
 
 
-# Owns the polling thread and the current data source (live or replay).
-polling_service = PollingService(aircraft_tracker)
+@dataclass
+class AppServices:
+    """Everything the endpoints need, created once per running app."""
 
-# Statistics, prediction accuracy, geofences and closest-approach alerts,
-# all fed by tracker events rather than by polling the tracker.
-observers = attach_default_observers(aircraft_tracker)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    LoggingService.initialize()
-    polling_service.start()
-
-    try:
-        yield
-    finally:
-        polling_service.stop()
-        LoggingService.reset()
+    tracker: AircraftTracker
+    # Owns the polling thread and the current data source (live or replay).
+    polling: PollingService
+    # Statistics, prediction accuracy, geofences and closest-approach
+    # alerts, fed by tracker events rather than by polling the tracker.
+    observers: TrackerObservers
 
 
-app = FastAPI(title="JacobSky API", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
+def build_services():
+    tracker = AircraftTracker()
+    return AppServices(
+        tracker=tracker,
+        polling=PollingService(tracker),
+        observers=attach_default_observers(tracker),
+    )
 
-@app.get("/")
+
+def get_services(request: Request) -> AppServices:
+    return request.app.state.services
+
+
+Services = Depends(get_services)
+
+router = APIRouter()
+
+
+def create_app(services=None):
+    """
+    Build the FastAPI app. Without `services`, they are built at startup
+    and polling runs for the app's lifetime. With `services` (tests),
+    they are used as given and nothing is started.
+    """
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if services is not None:
+            yield
+            return
+
+        LoggingService.initialize()
+        app.state.services = build_services()
+        app.state.services.polling.start()
+
+        try:
+            yield
+        finally:
+            app.state.services.polling.stop()
+            LoggingService.reset()
+
+    app = FastAPI(title="JacobSky API", lifespan=lifespan)
+    app.state.services = services
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ],
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
+    )
+    app.include_router(router)
+    return app
+
+
+@router.get("/")
 def root():
     return {"message": "JacobSky API is running"}
-
 
 
 TRAJECTORY_STEP_SECONDS = 5
@@ -81,6 +126,8 @@ def serialize_aircraft(plane, predictor=DEFAULT_PREDICTOR):
     return {
         "id": plane.callsign,
         "callsign": plane.callsign,
+        # "observed", or "missing" while waiting out the grace period.
+        "state": plane.lifecycle.name,
         "latitude": plane.latitude,
         "longitude": plane.longitude,
         "altitude": plane.altitude,
@@ -105,20 +152,24 @@ def serialize_aircraft(plane, predictor=DEFAULT_PREDICTOR):
     }
 
 
-@app.get("/aircraft")
-def get_aircraft(rank: Literal["nearest", "fastest", "predicted"] | None = None):
+@router.get("/aircraft")
+def get_aircraft(
+    rank: Literal["nearest", "fastest", "predicted"] | None = None,
+    services: AppServices = Services,
+):
     """
     Return tracked aircraft ranked by `rank` (a RANKING_STRATEGIES key).
     Without `rank`, the tracker's default strategy is used.
     """
     strategy = RANKING_STRATEGIES[rank] if rank is not None else None
+    tracker = services.tracker
 
-    # Hold the tracker lock so the polling thread cannot change an
+    # Hold the tracker lock so the worker thread cannot change an
     # aircraft's history while it is being read.
-    with aircraft_tracker.lock:
+    with tracker.lock:
         return [
             serialize_aircraft(plane)
-            for plane in aircraft_tracker.get_sorted_aircrafts(strategy).values()
+            for plane in tracker.get_sorted_aircrafts(strategy).values()
         ]
 
 
@@ -134,39 +185,39 @@ class SpeedRequest(BaseModel):
     speed: float = Field(ge=MIN_REPLAY_SPEED, le=MAX_REPLAY_SPEED)
 
 
-@app.get("/source")
-def get_source():
+@router.get("/source")
+def get_source(services: AppServices = Services):
     """
     Current data source. `clock.now` is the time the aircraft timestamps
     are on (ahead of the wall clock in a sped-up replay) and
     `clock.speed` how fast it runs, so the map can animate to match.
     """
-    return polling_service.status()
+    return services.polling.status()
 
 
-@app.get("/recordings")
-def get_recordings():
-    return polling_service.list_recordings()
+@router.get("/recordings")
+def get_recordings(services: AppServices = Services):
+    return services.polling.list_recordings()
 
 
-@app.post("/source/replay")
-def start_replay(request: ReplayRequest):
+@router.post("/source/replay")
+def start_replay(request: ReplayRequest, services: AppServices = Services):
     return _switch(
-        polling_service.start_replay,
+        services.polling.start_replay,
         request.recording,
         speed=request.speed,
         loop=request.loop,
     )
 
 
-@app.post("/source/replay/speed")
-def set_replay_speed(request: SpeedRequest):
-    return _switch(polling_service.set_speed, request.speed)
+@router.post("/source/replay/speed")
+def set_replay_speed(request: SpeedRequest, services: AppServices = Services):
+    return _switch(services.polling.set_speed, request.speed)
 
 
-@app.post("/source/live")
-def go_live():
-    return _switch(polling_service.go_live)
+@router.post("/source/live")
+def go_live(services: AppServices = Services):
+    return _switch(services.polling.go_live)
 
 
 def _switch(action, *args, **kwargs):
@@ -183,30 +234,37 @@ def _switch(action, *args, **kwargs):
 
 # --- observers: statistics, accuracy and alerts ------------------------------
 
-@app.get("/stats")
-def get_stats():
+@router.get("/stats")
+def get_stats(services: AppServices = Services):
     """Tracker statistics, command queue health and the data source."""
-    source = polling_service.status()
+    source = services.polling.status()
 
     return {
-        "tracker": observers.statistics.summary(),
-        "queue": polling_service.worker_status(),
+        "tracker": services.observers.statistics.summary(),
+        "queue": services.polling.worker_status(),
         "source": {
             "mode": source["mode"],
             "recording": source["recording"],
             "speed": source["speed"],
             "progress": source["progress"],
         },
-        "prediction_accuracy": observers.accuracy.summary(),
+        "prediction_accuracy": services.observers.accuracy.summary(),
     }
 
 
-@app.get("/events")
-def get_events(limit: int = Query(default=50, ge=1, le=200)):
+@router.get("/events")
+def get_events(
+    limit: int = Query(default=50, ge=1, le=200),
+    services: AppServices = Services,
+):
     """Recent geofence and closest-approach events, newest first."""
-    return observers.events.recent(limit)
+    return services.observers.events.recent(limit)
 
 
-@app.get("/geofences")
-def get_geofences():
-    return [fence.summary() for fence in observers.geofences]
+@router.get("/geofences")
+def get_geofences(services: AppServices = Services):
+    return [fence.summary() for fence in services.observers.geofences]
+
+
+# The app uvicorn serves: `uvicorn api:app`.
+app = create_app()

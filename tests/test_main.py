@@ -276,3 +276,45 @@ def test_main_leaves_an_injected_executor_running():
         assert set(tracker.aircrafts) == {"TEST123"}
     finally:
         worker.stop()
+
+
+# --- bad timestamps -------------------------------------------------------
+
+@pytest.mark.parametrize("bad_time", [None, "1000", float("nan"), True])
+def test_missing_response_time_falls_back_to_local_clock(bad_time):
+    batch, _ = main.build_poll_commands(
+        [make_state(time_position=1000)], bad_time, clock=lambda: 1234.0
+    )
+
+    remove_missing = batch.commands[-2]
+    assert remove_missing.current_time == 1234.0
+
+
+def test_missing_response_time_keeps_the_grace_period():
+    tracker = AircraftTracker()
+    main.apply_states(tracker, [make_state(time_position=1000)], 1000)
+
+    # A response without a time used to drop every missing aircraft at once.
+    batch, _ = main.build_poll_commands([], None, clock=lambda: 1015.0)
+    batch.execute(tracker)
+
+    assert tracker.aircrafts["TEST123"].lifecycle.name == "missing"
+
+
+def test_future_timestamped_aircraft_is_never_tracked():
+    tracker = AircraftTracker()
+
+    main.apply_states(tracker, [make_state(callsign="FUTURE", time_position=10**10)], 1000)
+
+    assert tracker.aircrafts == {}
+
+
+def test_older_report_in_a_later_poll_does_not_rewind_the_aircraft():
+    tracker = AircraftTracker()
+    main.apply_states(tracker, [make_state(time_position=1000, longitude=23.1)], 1000)
+
+    main.apply_states(tracker, [make_state(time_position=990, longitude=22.0)], 1005)
+
+    aircraft = tracker.aircrafts["TEST123"]
+    assert aircraft.timestamp == 1000
+    assert aircraft.longitude == 23.1

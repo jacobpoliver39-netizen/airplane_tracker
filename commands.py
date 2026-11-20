@@ -73,7 +73,7 @@ class UpdateAircraftCommand(Command):
                     else None
                 )
 
-                existing.update_info(
+                applied = existing.update_info(
                     observation.longitude,
                     observation.latitude,
                     observation.timestamp,
@@ -82,6 +82,14 @@ class UpdateAircraftCommand(Command):
                     observation.velocity,
                     new_on_ground=observation.on_ground,
                 )
+                # It was in the response, so it is observed (back from
+                # missing, if it had dropped out of a poll).
+                existing.lifecycle.mark_observed()
+
+                if not applied:
+                    # An older report than the current position: nothing
+                    # changed, so there is nothing to announce or score.
+                    return
 
                 tracker.notify_aircraft_updated(
                     existing,
@@ -102,11 +110,13 @@ class UpdateAircraftCommand(Command):
 
 class RemoveMissingAircraftCommand(Command):
     """
-    Remove aircraft that were not in the latest OpenSky response.
+    Mark aircraft that were not in the latest OpenSky response as
+    missing, and remove those whose state says they have expired.
 
     With a current_time and a positive grace_seconds, a missing aircraft
     is only removed once its last position report is older than the
-    grace period, so a single missed poll does not drop its history.
+    grace period (MissingState.is_expired), so a single missed poll does
+    not drop its history.
     """
 
     def __init__(
@@ -124,14 +134,15 @@ class RemoveMissingAircraftCommand(Command):
             missing_callsigns = tracker.aircrafts.keys() - self.observed_callsigns
 
             for callsign in missing_callsigns:
-                if self._is_expired(tracker.aircrafts[callsign]):
+                lifecycle = tracker.aircrafts[callsign].lifecycle
+                lifecycle.mark_missing(self.current_time)
+
+                if lifecycle.is_expired(
+                    tracker.aircrafts[callsign],
+                    self.current_time,
+                    self.grace_seconds,
+                ):
                     tracker.remove_aircraft(callsign, reason="missing")
-
-    def _is_expired(self, aircraft):
-        if self.current_time is None or self.grace_seconds <= 0:
-            return True
-
-        return self.current_time - aircraft.timestamp > self.grace_seconds
 
 
 class RemoveLowAltitudeAircraftCommand(Command):

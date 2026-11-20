@@ -1,3 +1,4 @@
+from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
 from ranking_strategies import NearestStrategy, FastestApproachStrategy
 
@@ -5,6 +6,7 @@ from ranking_strategies import NearestStrategy, FastestApproachStrategy
 class FakeAircraft:
     def __init__(self, callsign, distance):
         self.callsign = callsign
+        self.lifecycle = AircraftLifecycle(callsign)
         self.distance = distance
 
     def get_distance_from_user(self):
@@ -151,6 +153,7 @@ def test_tracker_rejects_invalid_ranking_strategy():
 class FakeAircraftWithPrediction:
     def __init__(self, callsign, distance, straight_nearest, curved_nearest):
         self.callsign = callsign
+        self.lifecycle = AircraftLifecycle(callsign)
         self.distance = distance
         self.straight_nearest = straight_nearest
         self.curved_nearest = curved_nearest

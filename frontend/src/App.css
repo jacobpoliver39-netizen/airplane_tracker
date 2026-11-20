@@ -835,3 +835,279 @@
     min-width: 0;
   }
 }
+
+/* --- Insights: prediction accuracy and events ------------------------- */
+
+.insights-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.insight-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #263248;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.insight-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #263248;
+}
+
+.insight-heading .eyebrow {
+  margin-bottom: 8px;
+}
+
+.insight-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.insight-unit {
+  color: #64748b;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.insight-empty {
+  margin: 8px 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.insight-footnote {
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+/* Accuracy table */
+
+.accuracy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.accuracy-table th {
+  padding: 8px 10px;
+  color: #64748b;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.accuracy-table tbody th {
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.accuracy-table tbody tr {
+  border-top: 1px solid #1e293b;
+}
+
+.accuracy-cell {
+  padding: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.accuracy-value {
+  display: block;
+  margin-bottom: 6px;
+  color: #e2e8f0;
+}
+
+.accuracy-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: #1e293b;
+  overflow: hidden;
+}
+
+.accuracy-bar span {
+  display: block;
+  height: 100%;
+  background: #475569;
+}
+
+.accuracy-cell--best .accuracy-value {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.accuracy-cell--best .accuracy-bar span {
+  background: #34d399;
+}
+
+.accuracy-cell--empty {
+  color: #475569;
+}
+
+/* Event feed */
+
+.event-filters {
+  display: flex;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.event-filter {
+  padding: 6px 10px;
+  border: 0;
+  border-right: 1px solid #334155;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.event-filter:last-child {
+  border-right: 0;
+}
+
+.event-filter:hover {
+  color: #60a5fa;
+}
+
+.event-filter--active {
+  background: #172b45;
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.event-row {
+  display: grid;
+  grid-template-columns: auto 18px minmax(64px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #111a2b;
+  color: #cbd5e1;
+  font-size: 0.76rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.event-row:hover:not(:disabled) {
+  border-color: #334155;
+}
+
+.event-row:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.event-row--selected {
+  border-color: #fbbf24;
+}
+
+.event-time,
+.event-distance {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-icon {
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.event-row--geofence_enter .event-icon {
+  color: #f59e0b;
+}
+
+.event-row--geofence_exit .event-icon {
+  color: #94a3b8;
+}
+
+.event-row--closest_approach .event-icon {
+  color: #60a5fa;
+}
+
+.event-callsign {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.event-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .insights-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .event-row {
+    grid-template-columns: 18px minmax(56px, auto) minmax(0, 1fr) auto;
+  }
+
+  .event-time {
+    display: none;
+  }
+
+  .accuracy-table th,
+  .accuracy-cell {
+    padding: 8px 6px;
+  }
+}
+
+/* --- Aircraft lifecycle state ------------------------------------------- */
+
+.details-status--missing,
+.state-tag {
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+.state-tag {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid #92400e;
+  border-radius: 4px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}

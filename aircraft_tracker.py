@@ -86,9 +86,13 @@ class AircraftTracker:
             self._notify("on_aircraft_updated", aircraft, prediction_result)
 
     def remove_aircraft(self, callsign, reason="removed"):
-        """reason: e.g. 'missing', 'landed', 'low_altitude'."""
+        """
+        reason: e.g. 'missing', 'landed', 'low_altitude'. The aircraft
+        moves to its final Removed state and can never be updated again.
+        """
         with self.lock:
             aircraft = self.aircrafts.pop(callsign)
+            aircraft.lifecycle.mark_removed(reason)
             self._notify("on_aircraft_removed", aircraft, reason)
 
         logger.info("Aircraft removed from tracker: %s (%s)", callsign, reason)
@@ -97,6 +101,10 @@ class AircraftTracker:
         """Stop tracking every aircraft (e.g. when the data source changes)."""
         with self.lock:
             count = len(self.aircrafts)
+
+            for aircraft in self.aircrafts.values():
+                aircraft.lifecycle.mark_removed("cleared")
+
             self.aircrafts.clear()
             self._notify("on_tracker_cleared")
 

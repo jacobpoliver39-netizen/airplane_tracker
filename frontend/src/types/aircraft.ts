@@ -4,6 +4,9 @@ export type LatLng = [number, number];
 export interface Aircraft {
   id: string;
   callsign: string;
+  // Lifecycle state (aircraft_state.py). "missing" = absent from recent
+  // polls but still within the grace period; removed aircraft are not sent.
+  state: "observed" | "missing";
   latitude: number;
   longitude: number;
   altitude: number | null;

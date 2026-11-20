@@ -8,7 +8,9 @@ import api
 from fastapi.testclient import TestClient
 
 from aircraft import Aircraft
+from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
+from tracker_observers import attach_default_observers
 from ranking_strategies import RANKING_STRATEGIES, FastestApproachStrategy
 
 
@@ -20,6 +22,7 @@ class FakeAircraft:
 
     def __init__(self, callsign, distance, approach_speed):
         self.callsign = callsign
+        self.lifecycle = AircraftLifecycle(callsign)
         self.latitude = 42.0
         self.longitude = -73.0
         self.altitude = 12000
@@ -39,6 +42,19 @@ class FakeAircraft:
         return self.approach_speed
 
 
+def make_app(tracker=None, polling=None, observers=None):
+    """An app with the given services; polling is never started."""
+    tracker = tracker if tracker is not None else AircraftTracker()
+    return api.create_app(api.AppServices(
+        tracker=tracker,
+        polling=polling if polling is not None else FakePollingService(),
+        observers=(
+            observers if observers is not None
+            else attach_default_observers(tracker, geofences=[])
+        ),
+    ))
+
+
 def make_tracker():
     tracker = AircraftTracker()
     tracker.add_aircraft(FakeAircraft("NEAR_SLOW", 5.0, 100.0))
@@ -48,10 +64,10 @@ def make_tracker():
 
 def test_aircraft_endpoint_returns_nearest_first_by_default(monkeypatch):
     tracker = make_tracker()
-    monkeypatch.setattr(api, "aircraft_tracker", tracker)
+    app = make_app(tracker=tracker)
 
     # Not using the context manager means the polling lifespan doesn't start.
-    client = TestClient(api.app)
+    client = TestClient(app)
     response = client.get("/aircraft")
 
     assert response.status_code == 200
@@ -64,9 +80,9 @@ def test_aircraft_endpoint_returns_nearest_first_by_default(monkeypatch):
 def test_aircraft_endpoint_uses_selected_ranking_strategy(monkeypatch):
     tracker = make_tracker()
     tracker.set_ranking_strategy(FastestApproachStrategy())
-    monkeypatch.setattr(api, "aircraft_tracker", tracker)
+    app = make_app(tracker=tracker)
 
-    client = TestClient(api.app)
+    client = TestClient(app)
     response = client.get("/aircraft")
 
     assert response.status_code == 200
@@ -88,9 +104,9 @@ def test_aircraft_endpoint_uses_selected_ranking_strategy(monkeypatch):
 )
 def test_aircraft_endpoint_ranks_by_query_parameter(monkeypatch, rank, expected):
     tracker = make_tracker()
-    monkeypatch.setattr(api, "aircraft_tracker", tracker)
+    app = make_app(tracker=tracker)
 
-    client = TestClient(api.app)
+    client = TestClient(app)
     response = client.get("/aircraft", params={"rank": rank})
 
     assert response.status_code == 200
@@ -99,8 +115,8 @@ def test_aircraft_endpoint_ranks_by_query_parameter(monkeypatch, rank, expected)
 
 def test_rank_parameter_does_not_change_tracker_default(monkeypatch):
     tracker = make_tracker()
-    monkeypatch.setattr(api, "aircraft_tracker", tracker)
-    client = TestClient(api.app)
+    app = make_app(tracker=tracker)
+    client = TestClient(app)
 
     client.get("/aircraft", params={"rank": "fastest"})
     response = client.get("/aircraft")
@@ -112,9 +128,9 @@ def test_rank_parameter_does_not_change_tracker_default(monkeypatch):
 
 
 def test_aircraft_endpoint_rejects_unknown_rank(monkeypatch):
-    monkeypatch.setattr(api, "aircraft_tracker", make_tracker())
+    app = make_app(tracker=make_tracker())
 
-    client = TestClient(api.app)
+    client = TestClient(app)
     response = client.get("/aircraft", params={"rank": "slowest"})
 
     assert response.status_code == 422
@@ -129,9 +145,9 @@ def test_rank_options_match_ranking_strategies():
 
 
 def test_aircraft_endpoint_preserves_response_fields(monkeypatch):
-    monkeypatch.setattr(api, "aircraft_tracker", make_tracker())
+    app = make_app(tracker=make_tracker())
 
-    client = TestClient(api.app)
+    client = TestClient(app)
     response = client.get("/aircraft")
 
     assert response.status_code == 200
@@ -139,6 +155,7 @@ def test_aircraft_endpoint_preserves_response_fields(monkeypatch):
     assert set(plane) == {
         "id",
         "callsign",
+        "state",
         "latitude",
         "longitude",
         "altitude",
@@ -169,7 +186,7 @@ def make_real_aircraft(callsign, timestamp, longitude):
 def test_aircraft_endpoint_is_safe_while_tracker_is_updated(monkeypatch):
     tracker = AircraftTracker()
     tracker.add_aircraft(make_real_aircraft("STEADY", 1000, 22.5))
-    monkeypatch.setattr(api, "aircraft_tracker", tracker)
+    app = make_app(tracker=tracker)
 
     stop = threading.Event()
     errors = []
@@ -197,7 +214,7 @@ def test_aircraft_endpoint_is_safe_while_tracker_is_updated(monkeypatch):
     writer.start()
 
     try:
-        client = TestClient(api.app)
+        client = TestClient(app)
         for _ in range(50):
             response = client.get("/aircraft")
             assert response.status_code == 200
@@ -241,21 +258,21 @@ class FakePollingService:
 
 
 @pytest.fixture
-def fake_service(monkeypatch):
-    service = FakePollingService()
-    monkeypatch.setattr(api, "polling_service", service)
-    return service
+def fake_service():
+    return FakePollingService()
 
 
 def test_source_and_recordings_endpoints(fake_service):
-    client = TestClient(api.app)
+    app = make_app(polling=fake_service)
+    client = TestClient(app)
 
     assert client.get("/source").json()["mode"] == "live"
     assert client.get("/recordings").json()[0]["name"] == "session.jsonl"
 
 
 def test_start_replay_endpoint(fake_service):
-    client = TestClient(api.app)
+    app = make_app(polling=fake_service)
+    client = TestClient(app)
 
     response = client.post(
         "/source/replay", json={"recording": "session.jsonl", "speed": 10}
@@ -266,13 +283,15 @@ def test_start_replay_endpoint(fake_service):
 
 
 def test_start_replay_defaults_to_normal_speed(fake_service):
-    TestClient(api.app).post("/source/replay", json={"recording": "a.jsonl"})
+    app = make_app(polling=fake_service)
+    TestClient(app).post("/source/replay", json={"recording": "a.jsonl"})
 
     assert fake_service.calls == [("replay", "a.jsonl", 1.0, False)]
 
 
 def test_speed_and_live_endpoints(fake_service):
-    client = TestClient(api.app)
+    app = make_app(polling=fake_service)
+    client = TestClient(app)
 
     assert client.post("/source/replay/speed", json={"speed": 30}).status_code == 200
     assert client.post("/source/live").status_code == 200
@@ -281,7 +300,8 @@ def test_speed_and_live_endpoints(fake_service):
 
 @pytest.mark.parametrize("speed", [0, -5, 10_000])
 def test_speed_outside_limits_is_rejected(fake_service, speed):
-    response = TestClient(api.app).post(
+    app = make_app(polling=fake_service)
+    response = TestClient(app).post(
         "/source/replay/speed", json={"speed": speed}
     )
 
@@ -298,9 +318,9 @@ def test_speed_outside_limits_is_rejected(fake_service, speed):
     ],
 )
 def test_source_errors_map_to_status_codes(monkeypatch, error, status):
-    monkeypatch.setattr(api, "polling_service", FakePollingService(error))
+    app = make_app(polling=FakePollingService(error))
 
-    response = TestClient(api.app).post(
+    response = TestClient(app).post(
         "/source/replay", json={"recording": "x.jsonl"}
     )
 
@@ -309,7 +329,6 @@ def test_source_errors_map_to_status_codes(monkeypatch, error, status):
 
 # --- observer endpoints ----------------------------------------------------
 
-from tracker_observers import attach_default_observers
 
 
 class StatsPollingService(FakePollingService):
@@ -324,20 +343,25 @@ class StatsPollingService(FakePollingService):
 
 
 @pytest.fixture
-def observed_tracker(monkeypatch):
+def observed():
+    """(tracker, app) with real observers and one geofence."""
     tracker = AircraftTracker()
     fences = [{"name": "Here", "longitude": 23.0, "latitude": 40.6, "radius_miles": 5}]
-    monkeypatch.setattr(api, "observers", attach_default_observers(tracker, fences))
-    monkeypatch.setattr(api, "polling_service", StatsPollingService())
-    return tracker
+    app = make_app(
+        tracker,
+        polling=StatsPollingService(),
+        observers=attach_default_observers(tracker, fences),
+    )
+    return tracker, app
 
 
-def test_stats_endpoint_combines_observers_queue_and_source(observed_tracker):
-    observed_tracker.add_aircraft(
+def test_stats_endpoint_combines_observers_queue_and_source(observed):
+    tracker, app = observed
+    tracker.add_aircraft(
         Aircraft("NEARBY", 1000, 23.01, 40.6, 10000, 90.0, "Test", 300.0, 23.0, 40.6)
     )
 
-    stats = TestClient(api.app).get("/stats").json()
+    stats = TestClient(app).get("/stats").json()
 
     assert stats["tracker"]["tracked"] == 1
     assert stats["queue"]["processed"] == 7
@@ -348,11 +372,12 @@ def test_stats_endpoint_combines_observers_queue_and_source(observed_tracker):
     assert set(stats["prediction_accuracy"]["segments"]) == {"all", "turning", "straight"}
 
 
-def test_events_and_geofences_endpoints(observed_tracker):
-    observed_tracker.add_aircraft(
+def test_events_and_geofences_endpoints(observed):
+    tracker, app = observed
+    tracker.add_aircraft(
         Aircraft("NEARBY", 1000, 23.01, 40.6, 10000, 90.0, "Test", 300.0, 23.0, 40.6)
     )
-    client = TestClient(api.app)
+    client = TestClient(app)
 
     events = client.get("/events").json()
     fences = client.get("/geofences").json()
@@ -361,3 +386,67 @@ def test_events_and_geofences_endpoints(observed_tracker):
     assert fences[0]["name"] == "Here"
     assert fences[0]["aircraft_inside"] == ["NEARBY"]
     assert client.get("/events", params={"limit": 0}).status_code == 422
+
+
+def test_aircraft_endpoint_reports_missing_state(monkeypatch):
+    tracker = make_tracker()
+    tracker.aircrafts["FAR_FAST"].lifecycle.mark_missing(1015)
+    app = make_app(tracker=tracker)
+
+    planes = TestClient(app).get("/aircraft").json()
+
+    assert {plane["callsign"]: plane["state"] for plane in planes} == {
+        "NEAR_SLOW": "observed",
+        "FAR_FAST": "missing",
+    }
+
+
+# --- app factory -----------------------------------------------------------
+
+def test_each_app_has_its_own_services():
+    first, second = make_app(), make_app()
+    first.state.services.tracker.add_aircraft(FakeAircraft("ONLY_FIRST", 1.0, 0.0))
+
+    assert [p["callsign"] for p in TestClient(first).get("/aircraft").json()] == ["ONLY_FIRST"]
+    assert TestClient(second).get("/aircraft").json() == []
+
+
+def test_lifespan_builds_and_stops_services(monkeypatch):
+    built = []
+
+    class FakeLivePolling(FakePollingService):
+        def __init__(self):
+            super().__init__()
+            self.started = self.stopped = False
+
+        def start(self):
+            self.started = True
+
+        def stop(self):
+            self.stopped = True
+
+    def fake_build():
+        tracker = AircraftTracker()
+        services = api.AppServices(
+            tracker, FakeLivePolling(), attach_default_observers(tracker, [])
+        )
+        built.append(services)
+        return services
+
+    monkeypatch.setattr(api, "build_services", fake_build)
+    app = api.create_app()
+    assert app.state.services is None  # nothing exists until startup
+
+    with TestClient(app) as client:
+        assert client.get("/aircraft").json() == []
+        assert built[0].polling.started
+
+    assert built[0].polling.stopped
+    assert len(built) == 1
+
+
+def test_no_module_level_tracker():
+    import main
+
+    assert not hasattr(api, "aircraft_tracker")
+    assert not hasattr(main, "aircraft_tracker")

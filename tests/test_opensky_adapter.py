@@ -165,3 +165,26 @@ def test_factory_creates_aircraft_from_observation():
     assert aircraft.user_longitude == 23.0
     assert aircraft.user_latitude == 40.6
     assert len(aircraft.location_history) == 1
+
+
+# --- timestamps after the response ----------------------------------------
+
+from opensky_adapter import MAX_TIMESTAMP_AHEAD_SECONDS
+
+
+def test_states_timestamped_after_the_response_are_dropped():
+    states = [
+        make_state(callsign="NOW", time_position=1000),
+        make_state(callsign="SLIGHTLY_AHEAD", time_position=1000 + MAX_TIMESTAMP_AHEAD_SECONDS),
+        make_state(callsign="FUTURE", time_position=1000 + MAX_TIMESTAMP_AHEAD_SECONDS + 1),
+    ]
+
+    observations = OpenSkyAdapter().to_observations(states, response_time=1000)
+
+    assert [o.callsign for o in observations] == ["NOW", "SLIGHTLY_AHEAD"]
+
+
+def test_without_a_response_time_no_state_is_dropped_for_its_time():
+    states = [make_state(callsign="FUTURE", time_position=10**10)]
+
+    assert len(OpenSkyAdapter().to_observations(states)) == 1

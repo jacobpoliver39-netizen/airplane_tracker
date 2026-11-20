@@ -17,7 +17,6 @@ export interface TrackSample {
   remainingSeconds: number;
 }
 
-const MILES_PER_DEGREE_LATITUDE = 69.09;
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 const toDegrees = (radians: number) => (radians * 180) / Math.PI;
 
@@ -46,23 +45,6 @@ export function bearing(from: LatLng, to: LatLng): number | null {
     Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
 
   return (toDegrees(Math.atan2(y, x)) + 360) % 360;
-}
-
-/** Point reached by travelling distanceMiles on headingDegrees (short distances). */
-export function travel(
-  from: LatLng,
-  headingDegrees: number,
-  distanceMiles: number,
-): LatLng {
-  const heading = toRadians(headingDegrees);
-  const north = distanceMiles * Math.cos(heading);
-  const east = distanceMiles * Math.sin(heading);
-
-  return [
-    from[0] + north / MILES_PER_DEGREE_LATITUDE,
-    from[1] +
-      east / (MILES_PER_DEGREE_LATITUDE * Math.cos(toRadians(from[0]))),
-  ];
 }
 
 /**

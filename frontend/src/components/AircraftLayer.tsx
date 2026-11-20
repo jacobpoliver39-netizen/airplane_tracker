@@ -5,7 +5,6 @@ import type { Aircraft, LatLng } from "../types/aircraft";
 import {
   angleDifference,
   sampleTrack,
-  travel,
   type Track,
 } from "../animation/motion";
 import { simNowSeconds } from "../animation/clock";
@@ -23,6 +22,9 @@ const CORRECTION_MS = 1500;
 // A correction bigger than this is a different flight or bad data:
 // jump straight to the new position instead of gliding across the map.
 const MAX_GLIDE_DEGREES = 0.1; // about 7 miles
+
+// Missing aircraft (absent from recent polls) are drawn faded.
+const MISSING_OPACITY = 0.4;
 
 // The ✈ glyph points east, so rotate by heading - 90.
 const ICON_ROTATION_OFFSET = -90;
@@ -157,19 +159,9 @@ function computeFrame(entry: Entry, simSeconds: number, nowMs: number): Frame {
 
   const position = path[0];
 
-  // On a straight track the dashed line is the track itself. On a curved
-  // one it is the tangent: where the aircraft would go if it stopped
-  // turning now, over the same remaining time.
-  const straightPath = entry.turning
-    ? [
-        position,
-        travel(
-          position,
-          heading,
-          (entry.plane.speed * sample.remainingSeconds) / 3600,
-        ),
-      ]
-    : path;
+  // The dashed straight-line prediction is only drawn when there is no
+  // curved one; a turning aircraft shows just its curve.
+  const straightPath = entry.turning ? [] : path;
 
   return {
     position,
@@ -271,6 +263,7 @@ export default function AircraftLayer({
         entry.straightLine.addTo(map);
         entry.curvedLine.addTo(map);
         marker.addTo(map);
+        marker.setOpacity(plane.state === "missing" ? MISSING_OPACITY : 1);
         applyFrame(entry, computeFrame(entry, simSeconds, nowMs));
         entries.set(plane.id, entry);
         continue;
@@ -305,6 +298,7 @@ export default function AircraftLayer({
       }
 
       existing.marker.setPopupContent(popupHtml(plane));
+      existing.marker.setOpacity(plane.state === "missing" ? MISSING_OPACITY : 1);
     }
 
     for (const [id, entry] of entries) {

@@ -1,9 +1,11 @@
+from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
 from commands import RemoveMissingAircraftCommand, RemoveLowAltitudeAircraftCommand
 
 class FakeAircraft:
     def __init__(self, callsign, altitude=30000, timestamp=1000, on_ground=False):
         self.callsign = callsign
+        self.lifecycle = AircraftLifecycle(callsign)
         self.altitude = altitude
         self.timestamp = timestamp
         self.on_ground = on_ground
@@ -218,3 +220,27 @@ def test_batch_update_then_removal_is_applied_together():
     ]).execute(tracker)
 
     assert tracker.aircrafts == {}
+
+
+def test_update_command_ignores_an_older_report_without_announcing_it():
+    tracker = AircraftTracker()
+    updates = []
+
+    class Recorder:
+        def on_aircraft_added(self, aircraft):
+            pass
+
+        def on_aircraft_updated(self, aircraft, prediction_result):
+            updates.append(aircraft.timestamp)
+
+    tracker.subscribe(Recorder())
+    make_update(make_observation(timestamp=1000)).execute(tracker)
+    tracker.aircrafts["TEST123"].lifecycle.mark_missing(1015)
+
+    make_update(make_observation(timestamp=990, longitude=22.0)).execute(tracker)
+
+    aircraft = tracker.aircrafts["TEST123"]
+    assert aircraft.timestamp == 1000 and aircraft.longitude == 23.1
+    assert updates == []
+    # It was in the response, so it is no longer missing.
+    assert aircraft.lifecycle.name == "observed"
