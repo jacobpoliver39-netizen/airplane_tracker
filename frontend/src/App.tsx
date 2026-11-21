@@ -68,14 +68,19 @@ function App() {
     const fetchSource = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/source`);
-        if (!response.ok) return;
+        if (!response.ok) {
+          console.warn(`GET /source failed: HTTP ${response.status}`);
+          return;
+        }
         const data = (await response.json()) as SourceStatus;
         if (isMounted) {
           syncSimClock(data.clock.now, data.clock.speed);
           setSource(data);
         }
-      } catch {
-        // Reported through the aircraft request below.
+      } catch (error) {
+        // The status badge reports the connection through the aircraft
+        // request; this keeps the cause visible in the console.
+        console.warn("GET /source failed:", error);
       }
     };
 
@@ -136,9 +141,16 @@ function App() {
     const getJson = async <T,>(path: string): Promise<T | null> => {
       try {
         const response = await fetch(`${API_BASE_URL}${path}`);
-        return response.ok ? ((await response.json()) as T) : null;
-      } catch {
-        return null; // The status badge already reports connection problems.
+        if (!response.ok) {
+          console.warn(`GET ${path} failed: HTTP ${response.status}`);
+          return null;
+        }
+        return (await response.json()) as T;
+      } catch (error) {
+        // The status badge already reports connection problems; the
+        // panels keep their last data.
+        console.warn(`GET ${path} failed:`, error);
+        return null;
       }
     };
 

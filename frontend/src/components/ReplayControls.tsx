@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../config";
 import type { RecordingInfo, SourceStatus } from "../types/source";
 
-// Must stay within MIN_REPLAY_SPEED..MAX_REPLAY_SPEED in polling_service.py.
+// Must stay within MIN_REPLAY_SPEED..MAX_REPLAY_SPEED in config.py.
 const SPEEDS = [1, 2, 5, 10, 30, 60];
 
 interface ReplayControlsProps {
@@ -38,8 +38,9 @@ async function post(path: string, body?: unknown): Promise<SourceStatus> {
     try {
       const data = await response.json();
       if (typeof data?.detail === "string") detail = data.detail;
-    } catch {
-      // Keep the generic message.
+    } catch (error) {
+      // No JSON error body; keep the generic message.
+      console.warn(`POST ${path}: error response had no JSON detail`, error);
     }
     throw new Error(detail);
   }
@@ -64,14 +65,21 @@ export default function ReplayControls({
     let isMounted = true;
 
     fetch(`${API_BASE_URL}/recordings`)
-      .then((response) => (response.ok ? response.json() : []))
+      .then((response) => {
+        if (!response.ok) {
+          console.warn(`GET /recordings failed: HTTP ${response.status}`);
+          return [];
+        }
+        return response.json();
+      })
       .then((data: RecordingInfo[]) => {
         if (!isMounted || !Array.isArray(data)) return;
         setRecordings(data);
         setSelected((current) => current || data[0]?.name || "");
       })
-      .catch(() => {
-        // The API being down is already shown by the status badge.
+      .catch((error) => {
+        // The status badge shows the API is down; log the cause.
+        console.warn("GET /recordings failed:", error);
       });
 
     return () => {
