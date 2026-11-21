@@ -3,15 +3,15 @@ import threading
 import typing
 
 import pytest
-
-import api
 from fastapi.testclient import TestClient
 
+import api
+import config
 from aircraft import Aircraft
 from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
-from tracker_observers import attach_default_observers
 from ranking_strategies import RANKING_STRATEGIES, FastestApproachStrategy
+from tracker_observers import attach_default_observers
 
 
 class FakeAircraft:
@@ -207,7 +207,7 @@ def test_aircraft_endpoint_is_safe_while_tracker_is_updated(monkeypatch):
                     )
                     if step > 1:
                         tracker.remove_aircraft(f"TMP{step - 1}")
-        except Exception as error:  # pragma: no cover - reported below
+        except Exception as error:  # noqa: BLE001 - any error fails the test below
             errors.append(error)
 
     writer = threading.Thread(target=keep_updating)
@@ -462,11 +462,11 @@ def crowded_tracker(count):
 
 
 def test_aircraft_response_is_capped_and_reports_the_total():
-    app = make_app(tracker=crowded_tracker(api.MAX_AIRCRAFT_PER_RESPONSE + 5))
+    app = make_app(tracker=crowded_tracker(config.MAX_AIRCRAFT_PER_RESPONSE + 5))
 
     response = TestClient(app).get("/aircraft")
 
-    assert api.MAX_AIRCRAFT_PER_RESPONSE == 1000
+    assert config.MAX_AIRCRAFT_PER_RESPONSE == 1000
     assert len(response.json()) == 1000
     assert response.headers["X-Total-Aircraft"] == "1005"
     # The nearest are kept (FakeAircraft distance = its index).

@@ -18,7 +18,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import config
@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 FORMAT_VERSION = 1
 
-RECORDINGS_DIR = Path(__file__).resolve().parent / "data" / "recordings"
 
 
 @dataclass(frozen=True)
@@ -59,7 +58,7 @@ class Recording:
 
 def default_recording_path(now=None):
     now = now or datetime.now()
-    return RECORDINGS_DIR / f"opensky_{now:%Y%m%d_%H%M%S}.jsonl"
+    return config.RECORDINGS_DIR / f"opensky_{now:%Y%m%d_%H%M%S}.jsonl"
 
 
 class FlightRecorder:
@@ -77,7 +76,7 @@ class FlightRecorder:
             header = {
                 "type": "header",
                 "format": FORMAT_VERSION,
-                "started_at": datetime.now(timezone.utc).isoformat(),
+                "started_at": datetime.now(UTC).isoformat(),
                 "bounding_box": config.BOUNDING_BOX,
                 "user_position": {
                     "longitude": config.USER_LONGITUDE,

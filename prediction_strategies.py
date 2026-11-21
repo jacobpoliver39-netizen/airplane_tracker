@@ -22,10 +22,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import NamedTuple
 
+import config
 from calculator import Calculator
-
-# How many recent positions the history-based estimates use.
-HISTORY_WINDOW = 6
 
 
 @dataclass(frozen=True)
@@ -45,7 +43,7 @@ class NearestApproach(NamedTuple):
     time_seconds: float | None  # None when there is no future closest point
 
 
-def recent_positions(aircraft, count=HISTORY_WINDOW):
+def recent_positions(aircraft, count=config.PREDICTION_HISTORY_WINDOW):
     """The aircraft's last `count` positions as (timestamp, lon, lat)."""
     positions = sorted(aircraft.location_history.items())[-count:]
 

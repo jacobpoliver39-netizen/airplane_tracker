@@ -2,20 +2,16 @@
 import csv
 import logging
 import time
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 import requests
 
 import config
 from opensky_client import OpenSkyClient, OpenSkyRateLimitError
 
+logger = logging.getLogger(__name__)
 
-OUTPUT_FILE = (
-    Path(__file__).resolve().parent
-    / "data"
-    / "opensky_observations.csv"
-)
+OUTPUT_FILE = config.OBSERVATIONS_CSV
 
 FIELDNAMES = [
     "collected_at",
@@ -52,8 +48,8 @@ def collect():
 
     client = OpenSkyClient()
 
-    logging.info("Saving observations to %s", OUTPUT_FILE)
-    logging.info(
+    logger.info("Saving observations to %s", OUTPUT_FILE)
+    logger.info(
         "Polling interval: %s seconds (%s access)",
         config.POLL_INTERVAL_SECONDS,
         "authenticated" if client.authenticated else "anonymous",
@@ -76,7 +72,7 @@ def collect():
 
                 try:
                     response_time, states = client.get_states()
-                    collected_at = datetime.now(timezone.utc).isoformat()
+                    collected_at = datetime.now(UTC).isoformat()
                     rows_written = 0
 
                     for state in states or []:
@@ -121,17 +117,17 @@ def collect():
 
                     csv_file.flush()
 
-                    logging.info(
+                    logger.info(
                         "Collected %d aircraft observations",
                         rows_written,
                     )
 
                 except OpenSkyRateLimitError as error:
-                    logging.warning("%s", error)
+                    logger.warning("%s", error)
                     wait_override = error.retry_after_seconds
 
                 except (requests.RequestException, ValueError) as error:
-                    logging.warning("OpenSky collection failed: %s", error)
+                    logger.warning("OpenSky collection failed: %s", error)
 
                 elapsed = time.monotonic() - cycle_start
                 wait_time = max(0, config.POLL_INTERVAL_SECONDS - elapsed)
@@ -153,4 +149,4 @@ if __name__ == "__main__":
     try:
         collect()
     except KeyboardInterrupt:
-        logging.info("Collector stopped.")
+        logger.info("Collector stopped.")

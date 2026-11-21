@@ -1,6 +1,7 @@
 import logging
 import math
 
+import config
 from observation import AircraftObservation
 
 logger = logging.getLogger(__name__)
@@ -8,9 +9,6 @@ logger = logging.getLogger(__name__)
 METERS_TO_FEET = 3.28084
 METERS_PER_SECOND_TO_MPH = 2.236936
 
-# A position may not be timestamped more than this after the response
-# that carries it. Later ones are bad data (and would never expire).
-MAX_TIMESTAMP_AHEAD_SECONDS = 120
 
 
 def _is_number(value):
@@ -36,7 +34,7 @@ class OpenSkyAdapter:
         Convert a list of OpenSky state arrays to observations.
 
         Incomplete or malformed states are skipped, and so are states
-        whose position time is more than MAX_TIMESTAMP_AHEAD_SECONDS after
+        whose position time is more than config.MAX_TIMESTAMP_AHEAD_SECONDS after
         response_time (when one is given).
         """
         observations = []
@@ -61,7 +59,7 @@ class OpenSkyAdapter:
                 "Skipped %d OpenSky states timestamped more than %d s after "
                 "the response",
                 from_future,
-                MAX_TIMESTAMP_AHEAD_SECONDS,
+                config.MAX_TIMESTAMP_AHEAD_SECONDS,
             )
 
         return observations
@@ -71,7 +69,10 @@ class OpenSkyAdapter:
         if response_time is None:
             return False
 
-        return observation.timestamp > response_time + MAX_TIMESTAMP_AHEAD_SECONDS
+        return (
+            observation.timestamp
+            > response_time + config.MAX_TIMESTAMP_AHEAD_SECONDS
+        )
 
     @staticmethod
     def parse_state(state):

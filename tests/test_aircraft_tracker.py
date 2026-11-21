@@ -1,6 +1,6 @@
 from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
-from ranking_strategies import NearestStrategy, FastestApproachStrategy
+from ranking_strategies import FastestApproachStrategy, NearestStrategy
 
 
 class FakeAircraft:

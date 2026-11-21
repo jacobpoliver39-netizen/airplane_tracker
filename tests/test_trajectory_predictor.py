@@ -19,70 +19,6 @@ from trajectory_predictor import PredictionSnapshot, TrajectoryPredictor
 PREDICTOR = TrajectoryPredictor()
 
 
-def test_approach_status_is_approaching_when_future_closest_point_exists():
-    aircraft = Aircraft(
-        callsign="TESTAPPROACH",
-        timestamp=1000,
-        longitude=0.0,
-        latitude=1.0,
-        altitude=10000,
-        heading=180.0,
-        country_of_origin="Test",
-        velocity=100.0,
-        user_longitude=0.0,
-        user_latitude=0.0,
-    )
-
-    assert PREDICTOR.approach_status(aircraft) == "approaching"
-
-
-def test_approach_status_is_passed_after_distance_starts_increasing():
-    from aircraft import Position
-
-    aircraft = Aircraft(
-        callsign="TESTPASSED",
-        timestamp=1030,
-        longitude=0.0,
-        latitude=1.0,
-        altitude=10000,
-        heading=0.0,
-        country_of_origin="Test",
-        velocity=100.0,
-        user_longitude=0.0,
-        user_latitude=0.0,
-    )
-
-    aircraft.location_history[1000] = Position(
-        0.0, 0.0, 3.0, 180.0, 0.0
-    )
-    aircraft.location_history[1015] = Position(
-        0.0, 0.0, 1.0, 180.0, 0.0
-    )
-    aircraft.location_history[1030] = Position(
-        0.0, 0.0, 2.0, 0.0, 180.0
-    )
-    aircraft.distance_from_user = 2.0
-
-    assert PREDICTOR.approach_status(aircraft) == "passed"
-    assert aircraft.get_closest_distance_so_far() == 1.0
-
-
-def test_approach_status_is_moving_away_when_no_future_approach_exists():
-    aircraft = Aircraft(
-        callsign="TESTAWAY",
-        timestamp=1000,
-        longitude=0.0,
-        latitude=1.0,
-        altitude=10000,
-        heading=0.0,
-        country_of_origin="Test",
-        velocity=100.0,
-        user_longitude=0.0,
-        user_latitude=0.0,
-    )
-
-    assert PREDICTOR.approach_status(aircraft) == "moving_away"
-
 def test_estimated_turn_rate_detects_clockwise_turn():
     aircraft = Aircraft(
         callsign="TESTTURN",
@@ -339,7 +275,6 @@ def test_historical_strategy_uses_last_six_positions(monkeypatch):
 
     def fake_estimate(observations):
         received.append(observations)
-        return None
 
     monkeypatch.setattr(Calculator, "estimate_ground_motion", fake_estimate)
 
@@ -712,3 +647,39 @@ def test_ranking_falls_back_to_straight_when_heading_unchanged():
     assert NearestPredictedApproachStrategy(PREDICTOR).predicted_approach_distance(
         aircraft
     ) == straight.distance_miles
+
+
+# --- sampled nearest approach (PredictionStrategy.nearest_approach) --------
+# Ported from the tests of Calculator.nearest_approach_ctrv, the duplicate
+# this method replaced.
+
+def sampled_approach(east, north, speed_mph, track, turn_rate):
+    """Nearest approach to a user at (0, 0) from east/north miles."""
+    longitude, latitude = Calculator.local_coordinates_to_gps(east, north, 0.0, 0.0)
+    state = MotionState(1000, longitude, latitude, speed_mph, track, turn_rate)
+    return CTRVPredictionStrategy().nearest_approach(state, 0.0, 0.0)
+
+
+def test_sampled_approach_is_none_while_still_closing_at_window_end():
+    # 10 miles out at 1 mile per minute: closest point is after 60 s.
+    assert sampled_approach(0.0, 10.0, 60.0, 180.0, 0.0) is None
+
+
+def test_sampled_approach_is_none_when_moving_away():
+    # The closest point is now, not in the future.
+    assert sampled_approach(0.0, 0.5, 120.0, 0.0, 0.0) is None
+
+
+def test_sampled_approach_finds_closest_point_inside_window():
+    # 1 mile north at 2 miles per minute: passes overhead at 30 s.
+    distance, time = sampled_approach(0.0, 1.0, 120.0, 180.0, 0.0)
+
+    assert distance == pytest.approx(0.0, abs=0.01)
+    assert time == 30
+
+
+def test_sampled_approach_follows_a_turn():
+    distance, time = sampled_approach(2.0, 0.0, 120.0, 270.0, 0.5)
+
+    assert distance < 2.0
+    assert 0 < time <= 60

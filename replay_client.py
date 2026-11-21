@@ -17,7 +17,7 @@ All timestamps are shifted by a constant offset so the first frame
 appears to have been received just now. Frames are then served on the
 recorded schedule, so the gaps between responses (including any
 rate-limit pauses during recording) are reproduced, except that gaps
-longer than MAX_GAP_SECONDS are shortened.
+longer than config.REPLAY_MAX_GAP_SECONDS are shortened.
 
 At speeds other than 1 the replay's timestamps run faster than the
 wall clock. sim_now() gives the replay's current time on that same
@@ -30,6 +30,7 @@ import logging
 import statistics
 import time
 
+import config
 from flight_recording import load_recording
 
 logger = logging.getLogger(__name__)
@@ -37,16 +38,13 @@ logger = logging.getLogger(__name__)
 # Time positions (3) and last contact (4) in an OpenSky state array.
 _TIME_INDICES = (3, 4)
 
-# Longer gaps between frames (e.g. the recorder waiting out a rate
-# limit) are shortened to this, so a replay doesn't sit idle for hours.
-MAX_GAP_SECONDS = 300
 
 
 class ReplayOpenSkyClient:
     authenticated = False
 
     def __init__(self, path, speed=1.0, start_offset_seconds=0.0, loop=False,
-                 clock=time.time, max_gap_seconds=MAX_GAP_SECONDS):
+                 clock=time.time, max_gap_seconds=config.REPLAY_MAX_GAP_SECONDS):
         if speed <= 0:
             raise ValueError("Replay speed must be positive")
 

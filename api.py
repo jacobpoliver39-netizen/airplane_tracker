@@ -23,11 +23,10 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import config
 from aircraft_tracker import AircraftTracker
 from logging_service import LoggingService
 from polling_service import (
-    MAX_REPLAY_SPEED,
-    MIN_REPLAY_SPEED,
     PollingService,
     RecordingNotFoundError,
     SourceBusyError,
@@ -114,10 +113,6 @@ def root():
 
 TRAJECTORY_STEP_SECONDS = 5
 
-# Most aircraft one /aircraft response returns, so a crowded sky cannot
-# overload the browser. The top ones by the selected ranking are kept.
-MAX_AIRCRAFT_PER_RESPONSE = 1000
-
 
 def _round_or_none(value, digits=2):
     return None if value is None else round(value, digits)
@@ -171,13 +166,15 @@ def get_aircraft(
     response: Response,
     rank: Literal["nearest", "fastest", "predicted"] | None = None,
     limit: int = Query(
-        default=MAX_AIRCRAFT_PER_RESPONSE, ge=1, le=MAX_AIRCRAFT_PER_RESPONSE
+        default=config.MAX_AIRCRAFT_PER_RESPONSE,
+        ge=1,
+        le=config.MAX_AIRCRAFT_PER_RESPONSE,
     ),
     services: AppServices = Services,
 ):
     """
     Return up to `limit` tracked aircraft (at most
-    MAX_AIRCRAFT_PER_RESPONSE), ranked by `rank` (a RANKING_STRATEGIES
+    config.MAX_AIRCRAFT_PER_RESPONSE), ranked by `rank` (a RANKING_STRATEGIES
     key; without it, the tracker's default strategy). The
     X-Total-Aircraft header gives how many are tracked in total.
     """
@@ -196,12 +193,14 @@ def get_aircraft(
 
 class ReplayRequest(BaseModel):
     recording: str
-    speed: float = Field(default=1.0, ge=MIN_REPLAY_SPEED, le=MAX_REPLAY_SPEED)
+    speed: float = Field(
+        default=1.0, ge=config.MIN_REPLAY_SPEED, le=config.MAX_REPLAY_SPEED
+    )
     loop: bool = False
 
 
 class SpeedRequest(BaseModel):
-    speed: float = Field(ge=MIN_REPLAY_SPEED, le=MAX_REPLAY_SPEED)
+    speed: float = Field(ge=config.MIN_REPLAY_SPEED, le=config.MAX_REPLAY_SPEED)
 
 
 @router.get("/source")

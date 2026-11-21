@@ -1,6 +1,7 @@
 from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
-from commands import RemoveMissingAircraftCommand, RemoveLowAltitudeAircraftCommand
+from commands import RemoveLowAltitudeAircraftCommand, RemoveMissingAircraftCommand
+
 
 class FakeAircraft:
     def __init__(self, callsign, altitude=30000, timestamp=1000, on_ground=False):

@@ -38,38 +38,6 @@ def test_bearing_in_cardinal_directions(
     assert bearing == pytest.approx(expected_bearing)
 
 
-@pytest.mark.parametrize(
-    ("angle", "expected_direction"),
-    [
-        (0.0, "North"),
-        (45.0, "Northeast"),
-        (90.0, "East"),
-        (135.0, "Southeast"),
-        (180.0, "South"),
-        (225.0, "Southwest"),
-        (270.0, "West"),
-        (315.0, "Northwest"),
-        (359.0, "North"),
-    ],
-)
-def test_compass_direction(angle, expected_direction):
-    assert Calculator.direction_of_plane_from_user(angle) == expected_direction
-
-
-def test_heading_toward_user_is_classified_as_approaching():
-    assert Calculator.approaching(0.0, 180.0) == "Approaching You"
-
-
-def test_heading_away_from_user_is_classified_as_flying_away():
-    assert Calculator.approaching(0.0, 0.0) == "Flying Away From You"
-
-
-def test_perpendicular_heading_is_classified_correctly():
-    assert Calculator.approaching(0.0, 90.0) == (
-        "Flying Perpendicular to You"
-    )
-
-
 def test_nearest_approach_is_zero_for_direct_approach():
     assert Calculator.nearest_approach(0.0, 10.0, 180.0) == 0.0
 
@@ -353,52 +321,6 @@ def test_gps_to_local_coordinates_north_of_reference():
     assert east == pytest.approx(0.0)
     assert north == pytest.approx(69.09, abs=0.1)
 
-def test_nearest_approach_ctrv_straight_toward_reference():
-    result = Calculator.nearest_approach_ctrv(
-        aircraft_east=0.0,
-        aircraft_north=10.0,
-        speed_mph=60.0,
-        ground_track_degrees=180.0,
-        turn_rate_degrees_per_second=0.0,
-        prediction_seconds=60,
-        sample_interval_seconds=2,
-    )
-
-    # Still closing at the end of the window: the real closest point
-    # is later, so no estimate is given.
-    assert result is None
-
-
-def test_nearest_approach_ctrv_straight_past_reference():
-    result = Calculator.nearest_approach_ctrv(
-        aircraft_east=0.0,
-        aircraft_north=0.5,
-        speed_mph=120.0,
-        ground_track_degrees=0.0,
-        turn_rate_degrees_per_second=0.0,
-        prediction_seconds=60,
-        sample_interval_seconds=2,
-    )
-
-    # Moving away: the closest point is now, not in the future.
-    assert result is None
-
-def test_nearest_approach_ctrv_turning_flight():
-    result = Calculator.nearest_approach_ctrv(
-        aircraft_east=2.0,
-        aircraft_north=0.0,
-        speed_mph=120.0,
-        ground_track_degrees=270.0,
-        turn_rate_degrees_per_second=0.5,
-        prediction_seconds=60,
-        sample_interval_seconds=2,
-    )
-
-    distance, time = result
-
-    assert distance < 2.0
-    assert 0 < time <= 60
-
 def test_ground_motion_uses_multiple_observations():
     # Aircraft travels east at approximately 240 mph.
     # The final GPS observation contains a positional deviation.
@@ -417,24 +339,6 @@ def test_ground_motion_uses_multiple_observations():
     # The earlier observations establish the underlying eastbound motion.
     assert direction == pytest.approx(90.0, abs=0.5)
     assert speed == pytest.approx(164.0, abs=50.0)
-
-
-def test_nearest_approach_ctrv_closest_point_inside_window():
-    result = Calculator.nearest_approach_ctrv(
-        aircraft_east=0.0,
-        aircraft_north=1.0,
-        speed_mph=120.0,
-        ground_track_degrees=180.0,
-        turn_rate_degrees_per_second=0.0,
-        prediction_seconds=60,
-        sample_interval_seconds=2,
-    )
-
-    distance, time = result
-
-    # 1 mile north at 2 miles per minute: passes overhead at 30 s.
-    assert distance == pytest.approx(0.0, abs=0.01)
-    assert time == 30
 
 
 def test_haversine_distance_is_not_rounded():

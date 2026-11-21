@@ -1,14 +1,11 @@
 import logging
+from itertools import pairwise
 
+import config
 from aircraft_state import AircraftLifecycle, AircraftRemovedError
 from calculator import Calculator
 
 logger = logging.getLogger(__name__)
-
-# Positions kept per aircraft; older ones are dropped. Predictions use
-# only the last few; 150 is about 37 minutes at a 15 s poll interval.
-MAX_HISTORY_POSITIONS = 150
-
 
 class Aircraft:
     """
@@ -80,8 +77,8 @@ class Aircraft:
             self.location_history[self.timestamp] = Position(self.longitude, self.latitude, self.distance_from_user, self.heading, self.bearing_from_user)
             logger.debug("Location history updated: %s", self.callsign)
 
-            # Keep only the most recent MAX_HISTORY_POSITIONS.
-            while len(self.location_history) > MAX_HISTORY_POSITIONS:
+            # Keep only the most recent config.MAX_HISTORY_POSITIONS.
+            while len(self.location_history) > config.MAX_HISTORY_POSITIONS:
                 del self.location_history[min(self.location_history)]
 
     def get_distance_from_user(self):
@@ -97,9 +94,7 @@ class Aircraft:
 
         approach_speeds = []
 
-        for (earlier_time, earlier_position), (later_time, later_position) in zip(
-            positions, positions[1:]
-        ):
+        for (earlier_time, earlier_position), (later_time, later_position) in pairwise(positions):
             difference_in_time = later_time - earlier_time
 
             if difference_in_time <= 0:
@@ -119,22 +114,8 @@ class Aircraft:
         return round(sum(approach_speeds) / len(approach_speeds), 2)
 
     
-    def get_closest_distance_so_far(self):
-        """Return the smallest recorded distance from the user."""
-        if not self.location_history:
-            return self.distance_from_user
-
-        return min(
-            position.get_distance_from_user()
-            for position in self.location_history.values()
-        )
-
     def get_bearing_from_user_to_plane(self):
         return Calculator.bearing_angle_from_user_to_plane(self.longitude, self.latitude, self.user_longitude, self.user_latitude)
-
-    def get_direction_from_user_to_plane(self):
-        return Calculator.direction_of_plane_from_user(self.bearing_from_user)
-
 
 class Position:
 
@@ -156,10 +137,4 @@ class Position:
 
     def get_heading(self):
         return self.heading
-
-    def get_bearing_from_user(self):
-        return self.bearing_from_user
-
-
-
 

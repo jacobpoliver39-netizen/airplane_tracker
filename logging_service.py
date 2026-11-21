@@ -62,7 +62,7 @@ class LoggingService:
         cls,
         log_dir="logs",
         log_date=None,
-        console_stream: TextIO = None,
+        console_stream: TextIO | None = None,
     ):
         """
         Create the shared logging service, or return the existing one.

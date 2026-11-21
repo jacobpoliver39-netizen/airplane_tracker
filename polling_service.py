@@ -24,9 +24,6 @@ from replay_client import ReplayOpenSkyClient
 
 logger = logging.getLogger(__name__)
 
-MIN_REPLAY_SPEED = 0.25
-MAX_REPLAY_SPEED = 120
-
 # CSV files are converted to recordings here before replaying. It is a
 # subfolder so the converted copies aren't listed as recordings too.
 CSV_CACHE_DIRNAME = ".from_csv"
@@ -285,9 +282,10 @@ class PollingService:
 
 
 def _check_speed(speed):
-    if not MIN_REPLAY_SPEED <= speed <= MAX_REPLAY_SPEED:
+    if not config.MIN_REPLAY_SPEED <= speed <= config.MAX_REPLAY_SPEED:
         raise ValueError(
-            f"Speed must be between {MIN_REPLAY_SPEED} and {MAX_REPLAY_SPEED}"
+            f"Speed must be between {config.MIN_REPLAY_SPEED} and "
+            f"{config.MAX_REPLAY_SPEED}"
         )
 
 

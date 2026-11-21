@@ -1,6 +1,5 @@
+
 from aircraft import Aircraft
-from calculator import Calculator
-import pytest
 
 
 def test_update_info_recalculates_bearing_after_aircraft_moves():
@@ -31,34 +30,6 @@ def test_update_info_recalculates_bearing_after_aircraft_moves():
     )
 
     assert aircraft.bearing_from_user == 90.0
-
-
-def test_position_history_records_updated_bearing():
-    aircraft = Aircraft(
-        callsign="TEST456",
-        timestamp=1000,
-        longitude=0.0,
-        latitude=1.0,
-        altitude=10000,
-        heading=180.0,
-        country_of_origin="Test",
-        velocity=100.0,
-        user_longitude=0.0,
-        user_latitude=0.0,
-    )
-
-    aircraft.update_info(
-        new_longitude=1.0,
-        new_latitude=0.0,
-        new_timestamp=1015,
-        new_altitude=10000,
-        new_heading=180.0,
-        new_velocity=100.0,
-    )
-
-    latest_position = aircraft.location_history[1015]
-
-    assert latest_position.get_bearing_from_user() == 90.0
 
 
 def test_approach_speed_with_two_positions():
@@ -324,7 +295,7 @@ def test_newer_and_same_time_reports_are_applied():
 
 
 def test_history_keeps_only_the_most_recent_positions():
-    from aircraft import MAX_HISTORY_POSITIONS
+    from config import MAX_HISTORY_POSITIONS
 
     aircraft = make_simple_aircraft(timestamp=0)
 

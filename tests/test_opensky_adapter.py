@@ -169,7 +169,7 @@ def test_factory_creates_aircraft_from_observation():
 
 # --- timestamps after the response ----------------------------------------
 
-from opensky_adapter import MAX_TIMESTAMP_AHEAD_SECONDS
+from config import MAX_TIMESTAMP_AHEAD_SECONDS
 
 
 def test_states_timestamped_after_the_response_are_dropped():

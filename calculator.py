@@ -1,4 +1,5 @@
 import math
+from itertools import pairwise
 
 
 class Calculator:
@@ -124,7 +125,7 @@ class Calculator:
 
         segments = []
 
-        for earlier, later in zip(observations, observations[1:]):
+        for earlier, later in pairwise(observations):
             earlier_time, earlier_lon, earlier_lat = earlier
             later_time, later_lon, later_lat = later
 
@@ -150,7 +151,7 @@ class Calculator:
 
         turn_rates = []
 
-        for earlier, later in zip(segments, segments[1:]):
+        for earlier, later in pairwise(segments):
             earlier_time, earlier_bearing = earlier
             later_time, later_bearing = later
 
@@ -199,7 +200,7 @@ class Calculator:
         recent = observations[-max_observations:]
 
         # Require chronological observations with reasonable time gaps.
-        for earlier, later in zip(recent, recent[1:]):
+        for earlier, later in pairwise(recent):
             elapsed = later[0] - earlier[0]
 
             if elapsed <= 0 or elapsed > max_gap_seconds:
@@ -319,110 +320,6 @@ class Calculator:
         )
 
         return east, north
-
-    @staticmethod
-    def nearest_approach_ctrv(
-        aircraft_east,
-        aircraft_north,
-        speed_mph,
-        ground_track_degrees,
-        turn_rate_degrees_per_second,
-        prediction_seconds=60,
-        sample_interval_seconds=2,
-    ):
-        """
-        Predict the closest distance to the reference point using CTRV.
-
-        Aircraft position is expressed in local east/north miles.
-        Returns (minimum_distance_miles, time_seconds), or None when the
-        closest point is not inside the prediction window: either it is
-        now (the aircraft is moving away) or at the end of the window
-        (it is still closing, so the true closest point is later).
-        """
-        if (
-            speed_mph is None
-            or ground_track_degrees is None
-            or turn_rate_degrees_per_second is None
-            or speed_mph < 0
-            or prediction_seconds < 0
-            or sample_interval_seconds <= 0
-        ):
-            return None
-
-        closest_distance = float("inf")
-        closest_time = None
-
-        sample_times = range(
-            0,
-            prediction_seconds + 1,
-            sample_interval_seconds,
-        )
-
-        for elapsed_seconds in sample_times:
-            displacement = Calculator.predict_ctrv_position(
-                speed_mph,
-                ground_track_degrees,
-                turn_rate_degrees_per_second,
-                elapsed_seconds,
-            )
-
-            if displacement is None:
-                return None
-
-            predicted_east = aircraft_east + displacement[0]
-            predicted_north = aircraft_north + displacement[1]
-
-            distance = math.hypot(
-                predicted_east,
-                predicted_north,
-            )
-
-            if distance < closest_distance:
-                closest_distance = distance
-                closest_time = elapsed_seconds
-
-        if closest_time is None:
-            return None
-
-        if closest_time == sample_times[0] or closest_time == sample_times[-1]:
-            return None
-
-        return closest_distance, closest_time
-
-    @staticmethod
-    def direction_of_plane_from_user(angle):
-
-        if 337.5 < angle or angle <= 22.5:
-            return "North"
-        elif 22.5 < angle <= 67.5:
-            return "Northeast"
-        elif 67.5 < angle <= 112.5:
-            return "East"
-        elif 112.5 < angle <= 157.5:
-            return "Southeast"
-        elif 157.5 < angle <= 202.5:
-            return "South"
-        elif 202.5 < angle <= 247.5:
-            return "Southwest"
-        elif 247.5 < angle <= 292.5:
-            return "West"
-        elif 292.5 < angle <= 337.5:
-            return "Northwest"
-
-    @staticmethod
-    def approaching(bearing_from_me, heading):
-
-        bearing_to_me = (bearing_from_me + 180) % 360
-
-        difference = abs(heading - bearing_to_me)
-        difference = min(difference, 360 - difference)
-
-        if difference <= 45:
-            return "Approaching You"
-        elif difference >= 135:
-            return "Flying Away From You"
-        else:
-            return "Flying Perpendicular to You"
 
     @staticmethod
     def nearest_approach(bearing_from_me, distance_from_me, heading):

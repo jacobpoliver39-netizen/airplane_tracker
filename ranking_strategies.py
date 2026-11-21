@@ -9,7 +9,6 @@ class RankingStrategy(ABC):
     @abstractmethod
     def sort_aircrafts(self, aircrafts):
         """Return aircraft sorted according to this strategy."""
-        pass
 
 
 class NearestStrategy(RankingStrategy):

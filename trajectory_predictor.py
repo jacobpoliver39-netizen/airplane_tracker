@@ -120,26 +120,6 @@ class TrajectoryPredictor:
             state, aircraft.user_longitude, aircraft.user_latitude
         )
 
-    def approach_status(self, aircraft):
-        """'passed', 'approaching' or 'moving_away'."""
-        positions = sorted(aircraft.location_history.items())
-
-        # Getting closer, and now moving away again.
-        if len(positions) >= 3:
-            earlier = positions[-3][1].get_distance_from_user()
-            previous = positions[-2][1].get_distance_from_user()
-
-            if previous < earlier and aircraft.distance_from_user > previous:
-                return "passed"
-
-        approach = self.nearest_approach(aircraft, "straight")
-
-        if approach is not None and approach.time_seconds is not None \
-                and approach.time_seconds > 0:
-            return "approaching"
-
-        return "moving_away"
-
     # --- prediction accuracy ---------------------------------------------
 
     def snapshot(self, aircraft):
