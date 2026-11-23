@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 860" width="1600" height="860" font-family="Roboto, 'Segoe UI', Arial, sans-serif" font-size="20" fill="#1C2430">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5B6573"/></marker></defs>
+<rect width="1600" height="860" fill="#FFFFFF"/>
+<!-- batch contents -->
+<rect x="40" y="40" width="400" height="690" rx="12" fill="#F6F7F9" stroke="#E1E4E9" stroke-width="2"/>
+<text x="64" y="84" font-size="26" font-weight="700">CommandBatch</text>
+<text x="64" y="114" fill="#5B6573">one poll, run in this order</text>
+<g font-family="'Roboto Mono', Consolas, monospace" font-size="18" font-weight="700">
+<g fill="#FFFFFF" stroke="#E8772E" stroke-width="2">
+<rect x="80" y="156" width="336" height="112" rx="8"/><rect x="72" y="148" width="336" height="112" rx="8"/><rect x="64" y="140" width="336" height="112" rx="8"/>
+<rect x="64" y="350" width="352" height="130" rx="8"/><rect x="64" y="562" width="352" height="130" rx="8"/></g>
+<text x="84" y="180">UpdateAircraftCommand</text>
+<text x="84" y="390">RemoveMissingAircraft</text><text x="84" y="414">Command</text>
+<text x="84" y="602">RemoveLowAltitudeAircraft</text><text x="84" y="626">Command</text></g>
+<g fill="#5B6573" font-size="18"><text x="84" y="208">one per aircraft observed:</text><text x="84" y="232">add it, or update it</text>
+<text x="84" y="446">mark absent aircraft missing;</text><text x="84" y="468">remove them once expired</text>
+<text x="84" y="658">remove aircraft that landed or</text><text x="84" y="680">are below minimum altitude</text></g>
+<!-- lock -->
+<rect x="500" y="180" width="1060" height="364" rx="14" fill="#FDF4EE" stroke="#E8772E" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1540" y="214" text-anchor="end" font-weight="700" fill="#B4541A">tracker.lock held for the whole batch</text>
+<!-- arrows -->
+<g fill="none" stroke="#5B6573" stroke-width="2.5" marker-end="url(#a)">
+<path d="M240 268V348"/><path d="M240 480V560"/>
+<path d="M440 95H518"/><path d="M690 130V283"/><path d="M810 360H898"/><path d="M1150 360H1248"/>
+<path d="M1370 435V463"/><path d="M1245 493H750V400"/><path d="M1370 285V250H750V320"/>
+<path d="M690 435V588"/><path d="M810 660H898"/><path d="M1200 660H1258"/><path d="M690 730V768"/></g>
+<!-- nodes -->
+<g text-anchor="middle">
+<rect x="520" y="60" width="340" height="70" rx="35" fill="#1C2430"/><text x="690" y="90" fill="#fff" font-weight="700">TrackerWorker calls</text><text x="690" y="115" fill="#fff" font-family="'Roboto Mono', Consolas, monospace" font-size="18">batch.execute(tracker)</text>
+<g fill="#fff" stroke="#1C2430" stroke-width="2"><path d="M690 285L810 360L690 435L570 360z"/><path d="M1370 285L1490 360L1370 435L1250 360z"/><path d="M690 590L810 660L690 730L570 660z"/>
+<rect x="900" y="315" width="250" height="90" rx="8"/><rect x="1245" y="465" width="250" height="56" rx="8"/><rect x="900" y="620" width="300" height="80" rx="8"/></g>
+<text x="690" y="355">Another</text><text x="690" y="380">command?</text><text x="1370" y="355">Raised an</text><text x="1370" y="380">error?</text><text x="690" y="667">Any errors?</text>
+<text x="1025" y="352">Run it</text>
+<g font-family="'Roboto Mono', Consolas, monospace" font-size="17"><text x="1025" y="384" font-size="15">command.execute(tracker)</text><text x="1370" y="499">errors.append(error)</text><text x="1050" y="666">raise ExceptionGroup</text></g>
+<rect x="1260" y="605" width="300" height="110" rx="8" fill="#FCE9DC" stroke="#E8772E" stroke-width="2"/><text x="1410" y="640">TrackerWorker logs it,</text><text x="1410" y="666">counts 1 failed command,</text><text x="1410" y="692">and carries on</text>
+<rect x="590" y="770" width="200" height="50" rx="25" fill="#1C2430"/><text x="690" y="802" fill="#fff" font-weight="700">Batch applied</text></g>
+<g font-size="18" font-weight="700" fill="#B4541A"><text x="836" y="350">yes</text><text x="1398" y="456">yes</text><text x="1382" y="272">no</text><text x="664" y="576" text-anchor="end">no</text><text x="836" y="650">yes</text><text x="664" y="754" text-anchor="end">no</text></g>
+</svg>

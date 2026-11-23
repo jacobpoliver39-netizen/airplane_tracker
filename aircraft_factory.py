@@ -6,6 +6,10 @@ class AircraftFactory:
     """
     Creates Aircraft from provider-independent observations.
 
+    A Simple Factory: one concrete class with a create() method. It is
+    not the GoF Factory Method, which has subclasses override the
+    creation step.
+
     Holds the user position every Aircraft is measured against, so
     callers only need the observation.
     """

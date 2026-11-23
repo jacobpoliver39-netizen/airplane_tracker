@@ -182,7 +182,12 @@ class CommandBatch(Command):
     A list of commands executed in order as one unit (a macro command).
 
     The tracker lock is held for the whole batch, so the API never sees
-    a poll half-applied (e.g. updated but not yet pruned).
+    a poll in progress (e.g. updated but not yet pruned).
+
+    A command that raises does not stop the rest: one bad aircraft must
+    not block the other updates or the removals. The errors are raised
+    together at the end as an ExceptionGroup, so the executor still logs
+    and counts the failure. Nothing is rolled back.
     """
 
     def __init__(self, commands, label="batch"):
@@ -193,6 +198,17 @@ class CommandBatch(Command):
         return len(self.commands)
 
     def execute(self, tracker):
+        errors = []
+
         with tracker.lock:
             for command in self.commands:
-                command.execute(tracker)
+                try:
+                    command.execute(tracker)
+                except Exception as error:  # noqa: BLE001 - re-raised below
+                    errors.append(error)
+
+        if errors:
+            raise ExceptionGroup(
+                f"{len(errors)} of {len(self)} commands failed in {self.label}",
+                errors,
+            )

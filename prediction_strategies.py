@@ -158,24 +158,25 @@ class CTRVPredictionStrategy(PredictionStrategy):
     to past positions lags behind a turning aircraft (up to ~100 degrees),
     which drew the curve out of the side of the plane.
 
-    Rule: if OpenSky reported the same heading in the aircraft's two most
-    recent positions, it is flying straight, so there is no curved
-    prediction and everything falls back to the straight line. (The
-    turn-rate estimate looks back further and would still bend the path
-    after a turn has ended.)
+    Rule: if the headings OpenSky reported in the aircraft's two most
+    recent positions are the same, to within
+    same_heading_tolerance_degrees, it is flying straight, so there is
+    no curved prediction and everything falls back to the straight line.
+    (The turn-rate estimate looks back further and would still bend the
+    path after a turn has ended.)
     """
 
     name = "curved"
 
-    # Headings at most this far apart count as "the same". 0 = identical
-    # (0 and 360 are treated as the same heading).
+    # Headings at most this many degrees apart count as "the same".
+    # Compared around the circle, so 359.8 and 0.1 are 0.3 apart.
     same_heading_tolerance_degrees = 0.5
 
     def estimate_turn_rate(self, aircraft):
         return Calculator.estimate_turn_rate(recent_positions(aircraft))
 
     def heading_unchanged(self, aircraft):
-        """True if the two most recent reported headings are the same."""
+        """True if the two most recent headings are within the tolerance."""
         latest = sorted(aircraft.location_history.items())[-2:]
 
         if len(latest) < 2:

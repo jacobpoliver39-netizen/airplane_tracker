@@ -92,9 +92,12 @@ OPENSKY_CLIENT_SECRET = _env_text("OPENSKY_CLIENT_SECRET")
 OPENSKY_AUTHENTICATED = bool(OPENSKY_CLIENT_ID and OPENSKY_CLIENT_SECRET)
 
 # OpenSky gives anonymous users 400 credits per day and registered
-# users 4000. At one credit per request, these defaults stay under
-# those limits for one running process (anonymous: 360/day,
-# authenticated: 2880/day). Override with JACOBSKY_POLL_INTERVAL.
+# users 4000, and a request for this box costs one credit. For one
+# running process:
+# - authenticated, 30 s: 2880 requests/day, within the limit.
+# - anonymous, 15 s: 5760 requests/day, over the limit. The credits run
+#   out after about 100 minutes, and the poller then backs off on 429.
+# Override with JACOBSKY_POLL_INTERVAL.
 _DEFAULT_POLL_INTERVAL = 30 if OPENSKY_AUTHENTICATED else 15
 POLL_INTERVAL_SECONDS = _env_int(
     "JACOBSKY_POLL_INTERVAL", _DEFAULT_POLL_INTERVAL, minimum=1

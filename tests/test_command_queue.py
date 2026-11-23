@@ -100,3 +100,18 @@ def test_worker_executes_batches():
 
     assert [name for name, _ in log] == ["a", "b"]
     assert worker.processed_count == 1
+
+
+def test_worker_counts_a_partly_failed_batch_as_failed():
+    log = []
+
+    with TrackerWorker(AircraftTracker()) as worker:
+        worker.submit(CommandBatch([
+            RecordingCommand(log, "bad", error=ValueError("boom")),
+            RecordingCommand(log, "good"),
+        ]))
+        worker.wait_until_idle()
+
+    assert "good" in [name for name, _ in log]
+    assert worker.failed_count == 1
+    assert worker.processed_count == 0

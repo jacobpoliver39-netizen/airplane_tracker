@@ -625,6 +625,21 @@ def test_same_heading_rule_handles_north_wraparound():
     assert CTRVPredictionStrategy().heading_unchanged(aircraft)
 
 
+@pytest.mark.parametrize(
+    "headings, unchanged",
+    [
+        ([45.0, 45.5], True),  # exactly the 0.5 degree tolerance
+        ([45.0, 45.6], False),
+        ([359.8, 0.1], True),
+        ([359.8, 0.4], False),
+    ],
+)
+def test_same_heading_rule_allows_half_a_degree(headings, unchanged):
+    aircraft = make_curving_history(headings)
+
+    assert CTRVPredictionStrategy().heading_unchanged(aircraft) is unchanged
+
+
 def test_same_heading_rule_needs_two_positions():
     aircraft = make_aircraft()
 

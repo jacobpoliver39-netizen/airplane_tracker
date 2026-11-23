@@ -1,3 +1,5 @@
+import pytest
+
 from aircraft_state import AircraftLifecycle
 from aircraft_tracker import AircraftTracker
 from commands import RemoveLowAltitudeAircraftCommand, RemoveMissingAircraftCommand
@@ -207,6 +209,55 @@ def test_batch_runs_commands_in_order_holding_the_lock():
 
     assert log == ["a", "b", "c"]
     assert len(batch) == 3
+
+
+def test_batch_runs_remaining_commands_after_one_fails():
+    log = []
+
+    class FailingCommand:
+        def __init__(self, error):
+            self.error = error
+
+        def execute(self, tracker):
+            raise self.error
+
+    first, second = ValueError("first"), KeyError("second")
+    tracker = AircraftTracker()
+
+    with pytest.raises(ExceptionGroup, match="2 of 4 commands failed in poll") as info:
+        CommandBatch(
+            [
+                FailingCommand(first),
+                RecordingCommand("a", log),
+                FailingCommand(second),
+                RecordingCommand("b", log),
+            ],
+            label="poll",
+        ).execute(tracker)
+
+    assert log == ["a", "b"]
+    assert info.value.exceptions == (first, second)
+    assert not tracker.lock._is_owned()
+
+
+def test_failed_update_does_not_block_other_updates_or_removals():
+    class BrokenFactory:
+        def create(self, observation):
+            raise RuntimeError("cannot build aircraft")
+
+    tracker = AircraftTracker()
+    make_update(make_observation(callsign="GONE")).execute(tracker)
+
+    with pytest.raises(ExceptionGroup):
+        CommandBatch([
+            UpdateAircraftCommand(
+                make_observation(callsign="BAD"), BrokenFactory(), 10
+            ),
+            make_update(make_observation(callsign="GOOD")),
+            RemoveMissingAircraftCommand({"BAD", "GOOD"}),
+        ]).execute(tracker)
+
+    assert set(tracker.aircrafts) == {"GOOD"}
 
 
 def test_batch_update_then_removal_is_applied_together():
